@@ -10,6 +10,29 @@
   <!-- INLINE:CSS -->
 </head>
 <body>
+  <main id="login-screen" class="login-screen" aria-labelledby="login-title">
+    <div class="login-layout">
+      <section class="login-intro" aria-label="Voomnet Ressources Humaines">
+        <div class="login-brand"><span class="login-logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 8.5 16 26 27 8.5h-7L16 16l-4-7.5H5Z" fill="currentColor"/></svg></span><div><strong>voomnet<span>.</span></strong><small>RESSOURCES HUMAINES</small></div></div>
+        <div class="login-intro-body"><div class="login-eyebrow"><span></span> VOTRE ESPACE DE DÉCISION RH</div><h1>Des décisions<br><em>plus éclairées.</em></h1><p>Retrouvez vos primes trimestrielles, contrats et alertes dans un espace pensé pour votre équipe RH.</p><div class="login-features"><div><span>01</span><strong>Primes trimestrielles</strong><small>Un suivi clair et centralisé</small></div><div><span>02</span><strong>Contrats &amp; alertes</strong><small>Les échéances, au bon moment</small></div></div></div>
+        <p class="login-intro-footer">VOOMNET TECHNOLOGY / FORMATION <span>·</span> ESPACE RH</p>
+      </section>
+      <section class="login-panel" aria-labelledby="login-title"><div class="login-card">
+        <div class="login-card-kicker"><span></span> CONNEXION RÉSERVÉE AU SERVICE RH</div>
+        <h2 id="login-title">Bienvenue sur<br>votre espace RH<span>.</span></h2>
+        <p class="login-description">Connectez-vous avec votre compte professionnel pour accéder à l’application.</p>
+        <form id="login-form" class="login-form">
+          <label for="login-email">Adresse e-mail professionnelle</label><input id="login-email" name="email" type="email" autocomplete="username" placeholder="vous@entreprise.ci" required>
+          <label for="login-password">Mot de passe</label><div class="login-password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Votre mot de passe" required><button id="login-toggle-password" type="button" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></div>
+          <div id="login-message" class="login-message" role="status" aria-live="polite"></div>
+          <button class="login-submit" type="submit">Se connecter <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="login-help"><span aria-hidden="true">✳</span><p><strong>Besoin d’un accès ?</strong><br>Contactez votre administrateur RH pour créer ou activer votre compte.</p></div>
+        <p class="login-security">Accès réservé aux personnes autorisées · Connexion internet requise</p>
+      </div></section>
+    </div>
+  </main>
+  <div id="application" hidden>
   <a href="#main-content" class="skip-link">Aller au contenu</a>
   <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-slate-950/40 hidden lg:hidden" data-action="close-sidebar"></div>
   <aside id="sidebar" class="sidebar" aria-label="Navigation principale">
@@ -23,7 +46,7 @@
     <p class="nav-caption mt-8">CONFIGURATION</p>
     <nav id="tools-nav" class="space-y-1"></nav>
     <div class="mt-auto pt-8">
-      <div class="sidebar-note"><i data-lucide="shield-check"></i><div><strong>Vos données restent ici</strong><p>Calculs dans votre navigateur ; partage en ligne uniquement à votre demande.</p></div></div>
+      <div class="sidebar-note"><i data-lucide="shield-check"></i><div><strong>Confidentialité des données</strong><p>Calculs dans votre navigateur ; partage en ligne uniquement à votre demande.</p></div></div>
       <div class="sidebar-user"><span class="avatar avatar-dark">RH</span><div><strong>Service RH</strong><small>Voomnet Technology / Formation</small></div><button class="icon-button text-slate-400 ml-auto" data-action="nav" data-page="settings" aria-label="Ouvrir les paramètres"><i data-lucide="settings-2"></i></button></div>
     </div>
   </aside>
@@ -43,7 +66,8 @@
   <div id="toasts" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
   <div id="busy" class="busy-overlay" hidden role="status"><div class="flex items-center gap-3 rounded-xl bg-white px-6 py-4 shadow-xl border border-slate-200"><span class="spinner"></span><span id="busy-label">Traitement de votre fichier…</span></div></div>
   <section id="print-report" aria-label="Rapport imprimable"></section>
-  <noscript><div class="p-8 text-red-700">Cette application nécessite JavaScript. Activez-le dans votre navigateur ; aucune donnée n’est transmise à un serveur.</div></noscript>
+  </div>
+  <noscript><p class="p-8 text-red-700">JavaScript est nécessaire pour se connecter à l’espace RH.</p></noscript>
   <!-- INLINE:LIBRARIES -->
   <!-- INLINE:DEMO -->
   <!-- INLINE:APP -->
