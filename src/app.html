@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Voomnet RH — Aide à la décision pour les primes trimestrielles, les contrats et les alertes e-mail. Traitement local de vos données.">
+  <title>Voomnet RH - Gestion des Primes Trimestrielles &amp; Contrats</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%232563eb'/%3E%3Cpath d='M9 12l11 18 11-18h-7l-4 7-4-7z' fill='white'/%3E%3C/svg%3E">
+  <!-- INLINE:CSS -->
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Aller au contenu</a>
+  <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-slate-950/40 hidden lg:hidden" data-action="close-sidebar"></div>
+  <aside id="sidebar" class="sidebar" aria-label="Navigation principale">
+    <a href="#" class="brand" data-action="nav" data-page="overview" aria-label="Voomnet RH, vue d’ensemble">
+      <span class="brand-mark"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 8.5 16 26 27 8.5h-7L16 16l-4-7.5H5Z" fill="currentColor"/></svg></span>
+      <span><strong>voomnet<span class="text-blue-400">.</span></strong><small>RESSOURCES HUMAINES</small></span>
+    </a>
+    <div class="workspace-label"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Espace RH <span class="ml-auto text-slate-500">CI</span></div>
+    <p class="nav-caption">PILOTAGE</p>
+    <nav id="main-nav" class="space-y-1"></nav>
+    <p class="nav-caption mt-8">CONFIGURATION</p>
+    <nav id="tools-nav" class="space-y-1"></nav>
+    <div class="mt-auto pt-8">
+      <div class="sidebar-note"><i data-lucide="shield-check"></i><div><strong>Vos données restent ici</strong><p>Import et calculs dans votre navigateur. Aucun serveur requis.</p></div></div>
+      <div class="sidebar-user"><span class="avatar avatar-dark">RH</span><div><strong>Service RH</strong><small>Voomnet Technology / Formation</small></div><button class="icon-button text-slate-400 ml-auto" data-action="nav" data-page="settings" aria-label="Ouvrir les paramètres"><i data-lucide="settings-2"></i></button></div>
+    </div>
+  </aside>
+  <div class="app-main">
+    <header class="topbar">
+      <div class="flex items-center gap-3 min-w-0"><button class="icon-button lg:hidden" data-action="open-sidebar" aria-label="Ouvrir la navigation"><i data-lucide="menu"></i></button><span class="text-slate-400 hidden sm:inline">Espace RH</span><i data-lucide="chevron-right" class="!w-3.5 !h-3.5 text-slate-300 hidden sm:block"></i><span id="breadcrumb" class="font-medium text-slate-700 truncate">Vue d’ensemble</span></div>
+      <div class="flex items-center gap-4"><span class="hidden xl:flex items-center gap-2 text-xs text-slate-500"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Traitement local sécurisé</span><span class="h-6 w-px bg-slate-200 hidden sm:block"></span><span id="today-label" class="text-xs text-slate-500 hidden sm:block"></span><button class="icon-button notification-button" data-action="show-alerts" aria-label="Voir les alertes de contrats"><i data-lucide="bell"></i><span id="notification-dot"></span></button><span class="avatar avatar-top" title="Service RH">RH</span></div>
+    </header>
+    <main id="main-content" class="main-content" tabindex="-1"></main>
+    <footer class="app-footer"><span>Voomnet RH <span class="text-slate-300 mx-2">/</span> Primes trimestrielles &amp; contrats</span><span>Données confidentielles · Décisions soumises à validation RH <span class="ml-2 text-slate-300">v1.0</span></span></footer>
+  </div>
+  <input type="file" id="file-absences" accept=".csv,.xlsx,.xls" hidden aria-label="Importer le fichier des absences">
+  <input type="file" id="file-pointage" accept=".csv,.xlsx,.xls" hidden aria-label="Importer le fichier de pointage">
+  <input type="file" id="file-employees" accept=".csv,.xlsx,.xls" hidden aria-label="Importer le référentiel des collaborateurs">
+  <input type="file" id="file-profile" accept=".json" hidden aria-label="Importer les fiches contractuelles au format JSON">
+  <dialog id="modal" aria-labelledby="modal-title"></dialog>
+  <div id="toasts" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+  <div id="busy" class="busy-overlay" hidden role="status"><div class="flex items-center gap-3 rounded-xl bg-white px-6 py-4 shadow-xl border border-slate-200"><span class="spinner"></span><span id="busy-label">Traitement de votre fichier…</span></div></div>
+  <section id="print-report" aria-label="Rapport imprimable"></section>
+  <noscript><div class="p-8 text-red-700">Cette application nécessite JavaScript. Activez-le dans votre navigateur ; aucune donnée n’est transmise à un serveur.</div></noscript>
+  <!-- INLINE:LIBRARIES -->
+  <!-- INLINE:DEMO -->
+  <!-- INLINE:APP -->
+</body>
+</html>

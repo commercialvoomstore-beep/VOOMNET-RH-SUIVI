@@ -1,0 +1,3 @@
+# Les CSV RH transmis utilisent des fins de ligne CRLF et un BOM UTF-8.
+# On conserve ces fichiers tels quels ; le CR final ne doit pas être signalé comme espace traînant.
+*.csv whitespace=cr-at-eol
