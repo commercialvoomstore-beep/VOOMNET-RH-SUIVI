@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { buildSync } from 'esbuild';
 const root = resolve(import.meta.dirname, '..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 mkdirSync(resolve(root, '.cache'), { recursive: true });
@@ -26,8 +27,9 @@ const demo = {
   filenames: { employees: 'LISTES-EMPLOYEES.csv', absences: 'LISTES-PERMISSIONS.csv', pointage: 'LISTES-POINTAGES.csv' }
 };
 const json = JSON.stringify(demo).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+const cloud = buildSync({ entryPoints: [resolve(root, 'src/cloud.js')], bundle: true, write: false, platform: 'browser', format: 'iife', target: ['es2022'], minify: true, legalComments: 'inline' }).outputFiles[0].text;
 let html = read('src/app.html');
-for (const [marker, content] of Object.entries({ CSS: `<style>\n${css}\n</style>`, LIBRARIES: `<script>\n${libraries}\n</script>`, DEMO: `<script>window.VOOMNET_DEMO=${json};</script>`, APP: `<script>\n${safeScript(read('src/core.js') + '\n' + read('src/app.js'))}\n</script>` })) {
+for (const [marker, content] of Object.entries({ CSS: `<style>\n${css}\n</style>`, LIBRARIES: `<script>\n${libraries}\n</script>`, DEMO: `<script>window.VOOMNET_DEMO=${json};</script>`, APP: `<script>\n${safeScript(read('src/core.js') + '\n' + read('src/app.js'))}\n</script>`, CLOUD: `<script>\n${safeScript(cloud)}\n</script>` })) {
   if (!html.includes(`<!-- INLINE:${marker} -->`)) throw new Error(`Missing marker: ${marker}`);
   html = html.replace(`<!-- INLINE:${marker} -->`, () => content);
 }

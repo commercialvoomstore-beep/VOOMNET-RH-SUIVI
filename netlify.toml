@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build && mkdir -p public && cp index.html public/index.html"
+  publish = "public"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    X-Frame-Options = "DENY"
+    Cache-Control = "no-store"

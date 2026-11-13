@@ -1,7 +1,7 @@
 # Voomnet RH — Gestion des Primes Trimestrielles & Contrats
 
 Application web d’aide à la décision RH, **en un seul fichier HTML autonome** : [`index.html`](index.html).
-Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et la démonstration Voomnet sont intégrés au fichier. Aucun CDN ni serveur applicatif n’est nécessaire pour ouvrir l’application.
+Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et la démonstration Voomnet sont intégrés au fichier. Aucun CDN ni serveur applicatif n’est nécessaire pour le mode local. Le partage en ligne nécessite Netlify Functions, Neon Auth et PostgreSQL.
 
 ## Démarrage
 
@@ -10,7 +10,7 @@ Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et la démonstration V
 - **Régénérer le fichier autonome** : `npm run build`.
 - **Tests** : `npm test` (moteur de règles) et `npm run test:browser` (nécessite `npm start` dans un autre terminal).
 
-Les sources de travail sont dans `src/`, les données transmises dans `data/`, et le résultat livrable est `index.html`.
+Les sources de travail sont dans `src/`, les données fictives de démonstration dans `data/`, et le résultat livrable est `index.html`.
 
 ## Données d’entrée
 
@@ -29,9 +29,9 @@ Les sources de travail sont dans `src/`, les données transmises dans `data/`, e
 - Les doublons exacts sont écartés ; les conflits de pointage pour un même matricule/date retiennent la dernière ligne et sont tracés.
 - Un code de suivi partagé entre plusieurs collaborateurs n’entraîne pas de suppression des demandes distinctes.
 
-### Démonstration transmise
+### Démonstration fictive
 
-Le référentiel joint contient **18 collaborateurs**, dont **17 présents dans le pointage**. L’application ne supprime ni n’invente de personne pour atteindre un chiffre annoncé de 17. Wilfried Gadou est présent uniquement dans le référentiel ; son service et ses dates ne sont pas déduits de son email.
+Le référentiel fictif contient **18 collaborateurs de démonstration**, dont **17 présents dans le pointage**. Ces noms, données et adresses sont artificiels. Collaborateur Démo 9001 est présent uniquement dans le référentiel ; son service et ses dates ne sont pas déduits de son email.
 
 Sur la période par défaut septembre–novembre 2026 et avec le contrôle croisé activé : 18 suivis, 8 primes disponibles, 10 non disponibles, 3 échéances ≤ J-30, 5 demandes déclarées et 13 jours « Absent » distincts au pointage.
 
@@ -92,10 +92,10 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
 ## Confidentialité et sécurité
 
-- Les fichiers sont lus et calculés dans le navigateur. Au chargement initial, l’application ne fait aucune requête externe.
+- Les fichiers sont lus et calculés dans le navigateur. Au chargement initial, l’application ne fait aucune requête externe. Une sauvegarde en ligne explicitement demandée transmet les sources, contrats et paramètres à l’API Netlify puis à Neon.
 - Un envoi API ne transmet les données qu’après validation explicite, au prestataire configuré.
 - Le `localStorage` n’est pas un coffre-fort chiffré : sur poste partagé, exporter puis effacer les données locales.
-- Les fichiers sources ne sont pas conservés après actualisation ; les fiches contractuelles et paramètres oui. La démonstration est réintégrée au HTML.
+- Les fichiers sources locaux ne sont pas conservés après actualisation ; les fiches contractuelles et paramètres le sont. Une sauvegarde partagée explicite est conservée en base. La démonstration fictive est réintégrée au HTML.
 - Ne jamais committer de jeton GitHub, mot de passe SMTP, secret Graph ou clé privée. Un jeton publié dans une conversation doit être révoqué.
 
 ## Développement
@@ -107,6 +107,43 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 - SheetJS est embarqué via la distribution npm `@e965/xlsx` 0.20.3 (miroir communautaire de SheetJS), avec PapaParse 5.5.3, Lucide 0.468.0 et Inter.
 - Les tests navigateur utilisent Playwright et un Chromium embarqué via `@sparticuz/chromium` pour éviter tout téléchargement depuis un CDN de navigateurs.
 
-## Déploiement
+## Déploiement Netlify + Neon (configuration manuelle requise)
 
-Déployer `index.html` sur n’importe quel hébergement statique (GitHub Pages, Netlify, Vercel, serveur interne). Pour un usage strictement local, le fichier peut être ouvert directement. Les appels EmailJS/webhook nécessitent une connexion sortante et une configuration CORS/API valide.
+**Attention : cette intégration est préparée dans le dépôt, mais n’est pas configurée ni testée sur un projet Neon réel depuis cet environnement.** Ne pas y stocker de données réelles tant que l’accès, les sauvegardes et la sécurité n’ont pas été vérifiés de bout en bout.
+
+1. Révoquer les clés S3 divulguées et en créer de nouvelles si nécessaire. Le stockage S3 n’est pas utilisé par cette intégration. Ne jamais partager `DATABASE_URL`, mot de passe, clés S3 ou secrets dans la conversation, dans Git ou dans le navigateur.
+2. Le dépôt GitHub a déjà contenu des données RH réelles dans `main` et son historique. Les données de la **version courante de cette branche** sont fictives, mais ceci ne supprime ni l’historique, ni les clones, ni les anciens déploiements. Restreindre immédiatement le dépôt et les anciens sites, puis organiser une purge de l’historique et une réponse adaptée à l’exposition avec les responsables concernés.
+3. Dans Neon, sélectionner le projet `lingering-hill-77521227` et la bonne branche/base `neondb`. À l’aide de l’éditeur SQL propriétaire, exécuter `database/001_initial.sql`. Le script est idempotent et ne crée pas d’utilisateurs. Il crée `rh_users` (liste d’accès explicite), `rh_workspace` (espace partagé versionné), et `rh_audit` (identifiant, action, version, date ; sans contenu RH).
+4. Activer Neon Auth et l’authentification email/mot de passe, ainsi que la vérification des adresses. Créer/inviter individuellement les comptes RH par les moyens administratifs de Neon. Ajouter l’origine HTTPS exacte du site Netlify aux domaines/origines de confiance Neon Auth, et vérifier CORS et les cookies inter-sites. L’URL Auth intégrée dans `src/cloud.js` correspond au projet communiqué ; pour une autre branche/projet, la modifier et reconstruire. Les navigateurs bloquant les cookies tiers peuvent empêcher la connexion ; tester dans les navigateurs utilisés par l’équipe.
+5. Chaque compte doit aussi être autorisé **explicitement** dans PostgreSQL : après vérification de l’identité auprès de l’administrateur, récupérer son `id` Neon Auth (affiché dans l’espace en ligne après connexion ou consultable dans la console Neon), puis exécuter dans l’éditeur SQL :
+
+   ```sql
+   INSERT INTO rh_users (user_id, active) VALUES ('ID_UTILISATEUR_NEON_AUTH', true)
+   ON CONFLICT (user_id) DO UPDATE SET active = true;
+   ```
+
+   Remplacer la valeur par l’identifiant réel, jamais par un email. Un compte créé mais absent/inactif dans `rh_users` reçoit 403. Pour le retirer : `UPDATE rh_users SET active = false WHERE user_id = 'ID_UTILISATEUR_NEON_AUTH';` Ne pas autoriser automatiquement tous les comptes inscrits. Tous les comptes autorisés ont les **mêmes droits** sur l’ensemble des données ; il n’y a pas de rôles distincts ni de cloisonnement par service.
+6. Connecter le site Netlify existant au dépôt GitHub et déployer la branche contenant ces changements après leur intégration dans la branche de production. Le fichier `netlify.toml` utilise Node 22, reconstruit `index.html`, publie uniquement `public/` et déploie la fonction `workspace`. Ne pas publier la racine du dépôt. Vérifier les réglages Netlify existants : ils ne doivent pas remplacer cette commande ou ce répertoire par l’ancienne configuration.
+7. Dans **Netlify → Site configuration → Environment variables**, configurer pour la fonction serveur (et le contexte de déploiement concerné) :
+
+   | Variable | Valeur |
+   |---|---|
+   | `DATABASE_URL` | URL PostgreSQL Neon avec TLS, fournie par Neon ; **secrète**, côté serveur uniquement. Utiliser de préférence un rôle applicatif distinct à privilèges minimaux. |
+   | `NEON_AUTH_BASE_URL` | `https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth` |
+   | `NEON_AUTH_JWKS_URL` | `https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json` |
+   | `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site, par exemple `https://votre-site.netlify.app`, sans chemin ni slash final. |
+
+   `DATABASE_URL` n’est pas une URL S3. Après modification des variables, redéployer. Pour chaque contexte ou domaine de prévisualisation, configurer explicitement son origine et sa base isolée ; ne pas ouvrir l’accès aux aperçus publics de production.
+8. La fonction exige un JWT Neon valide (signature JWKS, émetteur, audience, échéance), puis vérifie `rh_users` dans la base à chaque requête. Lecture et écriture sont journalisées. Un compte non listé ne peut pas accéder à la base même s’il peut se connecter à Neon Auth. Un jeton existant peut rester valable jusqu’à son expiration ; désactiver le compte dans `rh_users` bloque immédiatement l’API.
+9. Dans l’application : **Espace RH en ligne → se connecter → Charger depuis la base**. Si la base est vide, importer les fichiers réels puis choisir **Sauvegarder dans la base**. La sauvegarde est manuelle, limitée à 4 Mo de JSON par espace partagé, et protège contre les écrasements concurrents par un numéro de version. En cas de conflit, préserver/exporter les modifications locales avant de recharger : le chargement remplace l’espace local. Déconnexion : l’espace de travail et les paramètres de ce navigateur sont effacés, pas la base ; les modifications non enregistrées sont perdues.
+10. Vérifier avec deux comptes fictifs : refus d’un utilisateur non autorisé, chargement/sauvegarde, conflit, déconnexion et restauration ; vérifier aussi chiffrement, rétention, sauvegardes, disponibilité, journal d’accès et conformité applicables aux données RH et médicales. Ne pas considérer un test simulé comme un test réel du service.
+
+### Privilèges recommandés pour le rôle PostgreSQL de l’application
+
+Créer le rôle via les outils Neon sans inscrire son mot de passe dans Git. Avec un propriétaire de base, adapter les noms selon votre configuration, puis attribuer **uniquement** `SELECT` sur `rh_users`, `SELECT, UPDATE` sur `rh_workspace`, `INSERT` sur `rh_audit` et `USAGE` sur la séquence d’identité `rh_audit_id_seq` ; le rôle ne doit pas pouvoir modifier `rh_users`, le schéma, ni les tables Neon Auth. Utiliser ce rôle dans `DATABASE_URL`. Tester ces droits sur une base isolée avant mise en production.
+
+### Tests
+
+- `npm test` : moteur métier ; `npm run test:cloud` : API avec base et authentification simulées.
+- `npm run test:browser` : navigateur et accessibilité ; `node tests/cloud-browser.mjs` : authentification, API et conflit simulés (serveur local lancé avec `npm start`).
+- Les envois d’emails et l’authentification Neon réelle ne sont pas testés par ces simulations.
