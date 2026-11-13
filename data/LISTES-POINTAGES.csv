@@ -1,86 +1,86 @@
 ﻿Date;Matricule;Nom;Service;Statut;Arrivée;Départ;Retard (min);Durée (min)
-02/11/2026;1012;ARNAUD BERVELLE;Voomnet Technology;Journée terminée;08:01:06;17:43:23;0;582
-02/11/2026;2002;Audrey TADE;Voomnet Formation;Présent;09:07:19;;0;
-02/11/2026;1010;Caroline TOGBE;Voomnet Technology;Journée terminée;08:07:21;17:52:58;0;585
-02/11/2026;1015;DANIELLE YAO;Voomnet Technology;Journée terminée;08:01:03;18:02:22;0;601
-02/11/2026;1003;Ezechiel Kouakou;Voomnet Technology;Présent;07:48:14;;0;
-02/11/2026;2003;Falone KEKE;Voomnet Formation;Journée terminée;07:47:23;17:49:08;0;602
-02/11/2026;1007;JEAN-JOEL AKANDE;Voomnet Technology;Journée terminée;07:54:19;17:53:23;0;599
-02/11/2026;1006;Jean-Marc Kouakou;Voomnet Technology;Présent;07:49:28;;0;
-02/11/2026;1011;KOUAKOU FELICITE;Voomnet Technology;Présent;08:06:58;;0;
-02/11/2026;1009;KOUANDOU JOEL KOFFI;Voomnet Technology;Journée terminée;08:09:54;17:39:24;0;570
-02/11/2026;1018;LOÏC BOKA;Voomnet Technology;Absent;;;;
-02/11/2026;1005;Reine Tiela;Voomnet Technology;Absent;;;;
-02/11/2026;1013;SERGES KOFFI;Voomnet Technology;Journée terminée;08:04:50;17:06:21;0;542
-02/11/2026;1008;Sylvia Ursula Koffi;Voomnet Technology;Présent;07:57:47;;0;
-02/11/2026;1002;Tangui Gnamean;Voomnet Technology;Journée terminée;08:01:40;17:45:50;0;584
-02/11/2026;1014;TIMOTHEE KOUASSI;Voomnet Technology;Absent;;;;
-02/11/2026;1004;Williams KOFFI;Voomnet Technology;Journée terminée;07:55:00;17:09:07;0;554
-03/11/2026;1012;ARNAUD BERVELLE;Voomnet Technology;Journée terminée;07:56:09;17:54:33;0;598
-03/11/2026;2002;Audrey TADE;Voomnet Formation;Présent;09:03:31;;0;
-03/11/2026;1010;Caroline TOGBE;Voomnet Technology;Journée terminée;08:13:39;18:16:11;0;603
-03/11/2026;1015;DANIELLE YAO;Voomnet Technology;Journée terminée;07:59:48;18:16:23;0;617
-03/11/2026;1003;Ezechiel Kouakou;Voomnet Technology;Présent;07:55:18;;0;
-03/11/2026;2003;Falone KEKE;Voomnet Formation;Journée terminée;07:56:41;18:08:39;0;612
-03/11/2026;1007;JEAN-JOEL AKANDE;Voomnet Technology;Journée terminée;07:55:57;17:21:28;0;566
-03/11/2026;1006;Jean-Marc Kouakou;Voomnet Technology;Présent;08:05:58;;0;
-03/11/2026;1011;KOUAKOU FELICITE;Voomnet Technology;Journée terminée;07:48:43;18:18:48;0;630
-03/11/2026;1009;KOUANDOU JOEL KOFFI;Voomnet Technology;Journée terminée;08:07:24;18:29:01;0;622
-03/11/2026;1018;LOÏC BOKA;Voomnet Technology;Absent;;;;
-03/11/2026;1005;Reine Tiela;Voomnet Technology;Présent;07:51:33;;0;
-03/11/2026;1013;SERGES KOFFI;Voomnet Technology;Journée terminée;08:16:32;17:24:09;1;548
-03/11/2026;1008;Sylvia Ursula Koffi;Voomnet Technology;Journée terminée;07:47:44;18:50:38;0;663
-03/11/2026;1002;Tangui Gnamean;Voomnet Technology;Présent;08:02:10;;0;
-03/11/2026;1014;TIMOTHEE KOUASSI;Voomnet Technology;Absent;;;;
-03/11/2026;1004;Williams KOFFI;Voomnet Technology;Journée terminée;07:55:11;17:07:30;0;552
-04/11/2026;1012;ARNAUD BERVELLE;Voomnet Technology;Journée terminée;18:18:46;18:18:48;603;0
-04/11/2026;2002;Audrey TADE;Voomnet Formation;Journée terminée;08:53:42;18:17:24;0;564
-04/11/2026;1010;Caroline TOGBE;Voomnet Technology;Journée terminée;08:00:39;18:01:54;0;601
-04/11/2026;1015;DANIELLE YAO;Voomnet Technology;Journée terminée;08:01:30;18:27:41;0;626
-04/11/2026;1003;Ezechiel Kouakou;Voomnet Technology;Journée terminée;07:50:49;18:35:14;0;645
-04/11/2026;2003;Falone KEKE;Voomnet Formation;Journée terminée;08:07:59;18:16:36;0;609
-04/11/2026;1007;JEAN-JOEL AKANDE;Voomnet Technology;Journée terminée;07:53:44;17:29:27;0;576
-04/11/2026;1006;Jean-Marc Kouakou;Voomnet Technology;En retard;08:22:54;;7;
-04/11/2026;1011;KOUAKOU FELICITE;Voomnet Technology;Journée terminée;08:00:05;18:29:08;0;629
-04/11/2026;1009;KOUANDOU JOEL KOFFI;Voomnet Technology;Journée terminée;08:09:17;17:42:01;0;573
-04/11/2026;1018;LOÏC BOKA;Voomnet Technology;Absent;;;;
-04/11/2026;1005;Reine Tiela;Voomnet Technology;Journée terminée;07:50:46;18:35:48;0;645
-04/11/2026;1013;SERGES KOFFI;Voomnet Technology;Absent;;;;
-04/11/2026;1008;Sylvia Ursula Koffi;Voomnet Technology;Journée terminée;07:56:05;18:51:31;0;655
-04/11/2026;1002;Tangui Gnamean;Voomnet Technology;Journée terminée;08:03:55;18:41:35;0;638
-04/11/2026;1014;TIMOTHEE KOUASSI;Voomnet Technology;Absent;;;;
-04/11/2026;1004;Williams KOFFI;Voomnet Technology;Journée terminée;08:06:58;17:28:57;0;562
-05/11/2026;1012;ARNAUD BERVELLE;Voomnet Technology;Journée terminée;07:46:39;07:53:04;0;7
-05/11/2026;2002;Audrey TADE;Voomnet Formation;Présent;08:58:11;;0;
-05/11/2026;1010;Caroline TOGBE;Voomnet Technology;Journée terminée;08:37:09;17:54:09;22;557
-05/11/2026;1015;DANIELLE YAO;Voomnet Technology;Journée terminée;08:03:55;18:04:04;0;601
-05/11/2026;1003;Ezechiel Kouakou;Voomnet Technology;Journée terminée;07:49:00;18:52:40;0;663
-05/11/2026;2003;Falone KEKE;Voomnet Formation;Journée terminée;08:03:32;18:24:05;0;621
-05/11/2026;1007;JEAN-JOEL AKANDE;Voomnet Technology;Présent;07:50:01;;0;
-05/11/2026;1006;Jean-Marc Kouakou;Voomnet Technology;Présent;07:50:41;;0;
-05/11/2026;1011;KOUAKOU FELICITE;Voomnet Technology;Journée terminée;08:05:14;18:29:04;0;624
-05/11/2026;1009;KOUANDOU JOEL KOFFI;Voomnet Technology;Absent;;;;
-05/11/2026;1018;LOÏC BOKA;Voomnet Technology;Absent;;;;
-05/11/2026;1005;Reine Tiela;Voomnet Technology;Journée terminée;07:53:08;18:36:43;0;643
-05/11/2026;1013;SERGES KOFFI;Voomnet Technology;Journée terminée;07:52:03;17:07:08;0;555
-05/11/2026;1008;Sylvia Ursula Koffi;Voomnet Technology;Journée terminée;07:49:07;18:56:14;0;667
-05/11/2026;1002;Tangui Gnamean;Voomnet Technology;Présent;07:56:40;;0;
-05/11/2026;1014;TIMOTHEE KOUASSI;Voomnet Technology;Absent;;;;
-05/11/2026;1004;Williams KOFFI;Voomnet Technology;Journée terminée;10:33:23;17:35:40;138;422
-06/11/2026;1012;ARNAUD BERVELLE;Voomnet Technology;Présent;07:47:30;;0;
-06/11/2026;2002;Audrey TADE;Voomnet Formation;Journée terminée;08:14:58;18:18:23;0;604
-06/11/2026;1010;Caroline TOGBE;Voomnet Technology;Journée terminée;08:14:31;17:55:03;0;581
-06/11/2026;1015;DANIELLE YAO;Voomnet Technology;Journée terminée;08:06:21;17:56:00;0;590
-06/11/2026;1003;Ezechiel Kouakou;Voomnet Technology;Présent;08:00:02;;0;
-06/11/2026;2003;Falone KEKE;Voomnet Formation;Journée terminée;08:10:33;18:15:09;0;605
-06/11/2026;1007;JEAN-JOEL AKANDE;Voomnet Technology;Journée terminée;08:00:00;17:52:45;0;592
-06/11/2026;1006;Jean-Marc Kouakou;Voomnet Technology;Journée terminée;07:58:48;18:53:55;0;655
-06/11/2026;1011;KOUAKOU FELICITE;Voomnet Technology;Journée terminée;08:00:57;18:12:33;0;612
-06/11/2026;1009;KOUANDOU JOEL KOFFI;Voomnet Technology;Présent;08:13:16;;0;
-06/11/2026;1018;LOÏC BOKA;Voomnet Technology;Absent;;;;
-06/11/2026;1005;Reine Tiela;Voomnet Technology;Présent;07:57:40;;0;
-06/11/2026;1013;SERGES KOFFI;Voomnet Technology;Journée terminée;08:19:55;17:32:37;4;553
-06/11/2026;1008;Sylvia Ursula Koffi;Voomnet Technology;Journée terminée;07:52:57;19:52:18;0;720
-06/11/2026;1002;Tangui Gnamean;Voomnet Technology;Présent;07:48:27;;0;
-06/11/2026;1014;TIMOTHEE KOUASSI;Voomnet Technology;Absent;;;;
-06/11/2026;1004;Williams KOFFI;Voomnet Technology;Journée terminée;07:59:54;17:47:58;0;588
+02/11/2026;9002;Collaborateur Démo 9002;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9003;Collaborateur Démo 9003;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9004;Collaborateur Démo 9004;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9005;Collaborateur Démo 9005;Voomnet Technology;Absent;;;;
+02/11/2026;9006;Collaborateur Démo 9006;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9007;Collaborateur Démo 9007;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9008;Collaborateur Démo 9008;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9009;Collaborateur Démo 9009;Voomnet Technology;Absent;;;;
+02/11/2026;9010;Collaborateur Démo 9010;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9011;Collaborateur Démo 9011;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9012;Collaborateur Démo 9012;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9013;Collaborateur Démo 9013;Voomnet Technology;Absent;;;;
+02/11/2026;9014;Collaborateur Démo 9014;Voomnet Technology;Absent;;;;
+02/11/2026;9015;Collaborateur Démo 9015;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;9018;Collaborateur Démo 9018;Voomnet Technology;Absent;;;;
+02/11/2026;10002;Collaborateur Démo 10002;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+02/11/2026;10003;Collaborateur Démo 10003;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9002;Collaborateur Démo 9002;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9003;Collaborateur Démo 9003;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9004;Collaborateur Démo 9004;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9005;Collaborateur Démo 9005;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9006;Collaborateur Démo 9006;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9007;Collaborateur Démo 9007;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9008;Collaborateur Démo 9008;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9009;Collaborateur Démo 9009;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9010;Collaborateur Démo 9010;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9011;Collaborateur Démo 9011;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9012;Collaborateur Démo 9012;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9013;Collaborateur Démo 9013;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9014;Collaborateur Démo 9014;Voomnet Technology;Absent;;;;
+03/11/2026;9015;Collaborateur Démo 9015;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;9018;Collaborateur Démo 9018;Voomnet Technology;Absent;;;;
+03/11/2026;10002;Collaborateur Démo 10002;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+03/11/2026;10003;Collaborateur Démo 10003;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9002;Collaborateur Démo 9002;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9003;Collaborateur Démo 9003;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9004;Collaborateur Démo 9004;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9005;Collaborateur Démo 9005;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9006;Collaborateur Démo 9006;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9007;Collaborateur Démo 9007;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9008;Collaborateur Démo 9008;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9009;Collaborateur Démo 9009;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9010;Collaborateur Démo 9010;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9011;Collaborateur Démo 9011;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9012;Collaborateur Démo 9012;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9013;Collaborateur Démo 9013;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9014;Collaborateur Démo 9014;Voomnet Technology;Absent;;;;
+04/11/2026;9015;Collaborateur Démo 9015;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;9018;Collaborateur Démo 9018;Voomnet Technology;Absent;;;;
+04/11/2026;10002;Collaborateur Démo 10002;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+04/11/2026;10003;Collaborateur Démo 10003;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9002;Collaborateur Démo 9002;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9003;Collaborateur Démo 9003;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9004;Collaborateur Démo 9004;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9005;Collaborateur Démo 9005;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9006;Collaborateur Démo 9006;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9007;Collaborateur Démo 9007;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9008;Collaborateur Démo 9008;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9009;Collaborateur Démo 9009;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9010;Collaborateur Démo 9010;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9011;Collaborateur Démo 9011;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9012;Collaborateur Démo 9012;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9013;Collaborateur Démo 9013;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9014;Collaborateur Démo 9014;Voomnet Technology;Absent;;;;
+05/11/2026;9015;Collaborateur Démo 9015;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;9018;Collaborateur Démo 9018;Voomnet Technology;Absent;;;;
+05/11/2026;10002;Collaborateur Démo 10002;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+05/11/2026;10003;Collaborateur Démo 10003;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9002;Collaborateur Démo 9002;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9003;Collaborateur Démo 9003;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9004;Collaborateur Démo 9004;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9005;Collaborateur Démo 9005;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9006;Collaborateur Démo 9006;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9007;Collaborateur Démo 9007;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9008;Collaborateur Démo 9008;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9009;Collaborateur Démo 9009;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9010;Collaborateur Démo 9010;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9011;Collaborateur Démo 9011;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9012;Collaborateur Démo 9012;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9013;Collaborateur Démo 9013;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9014;Collaborateur Démo 9014;Voomnet Technology;Absent;;;;
+06/11/2026;9015;Collaborateur Démo 9015;Voomnet Technology;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;9018;Collaborateur Démo 9018;Voomnet Technology;Absent;;;;
+06/11/2026;10002;Collaborateur Démo 10002;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540
+06/11/2026;10003;Collaborateur Démo 10003;Voomnet Formation;Journée terminée;08:00:00;17:00:00;0;540

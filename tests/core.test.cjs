@@ -15,13 +15,13 @@ const pointRow = (mat, day, status = 'Présent', late = '', minutes = '') => [da
 const parseAbs = rows => C.parseCSV(csv(C.ABSENCE_HEADERS, rows), 'Absence.csv', 'absences');
 const parsePoint = rows => C.parseCSV(csv(C.POINTAGE_HEADERS, rows), 'Pointage.csv', 'pointage');
 
-test('données transmises : 18 personnes, 85 pointages, 5 demandes, aucun enregistrement inventé', () => {
+test('données fictives : 18 personnes, 85 pointages et 5 demandes', () => {
   const sources = fixture(), rows = C.evaluateAll(sources, {}, settings(), TODAY), s = C.aggregate(rows, settings());
   assert.equal(sources.employees.rows.length, 18); assert.equal(sources.pointage.rows.length, 85); assert.equal(sources.absences.rows.length, 5);
   assert.deepEqual([s.active, s.technology, s.formation, s.otherService, s.eligible, s.ineligible, s.budget, s.due, s.urgent, s.declared, s.rawAbsentDays], [18, 15, 2, 1, 8, 10, 400000, 3, 1, 5, 13]);
-  assert.equal(rows.find(r => r.mat === '1001').score, null);
-  assert.equal(rows.find(r => r.mat === '2002').type, '');
-  assert.equal(rows.find(r => r.mat === '1002').end, null);
+  assert.equal(rows.find(r => r.mat === '9001').score, null);
+  assert.equal(rows.find(r => r.mat === '10002').type, '');
+  assert.equal(rows.find(r => r.mat === '9002').end, null);
 });
 test('fenêtres : trois mois calendaires, trimestre civil, glissants et années bissextiles', () => {
   assert.deepEqual(C.periodPreset('calendar3', TODAY), { start: '2026-09-01', end: '2026-11-30' });
@@ -38,23 +38,23 @@ test('dates français jour/mois, ISO, séries Excel et dates impossibles', () =>
   assert.equal(C.diffDays('2026-11-12', '2026-11-02'), 10);
 });
 test('matricules joints sans fusion de noms ; casse et accents normalisés pour la recherche', () => {
-  assert.equal(C.matricule(' 1012.0 '), '1012'); assert.equal(C.matricule('0012'), '0012'); assert.notEqual(C.matricule('0012'), C.matricule('12'));
-  assert.equal(C.displayName('JEAN-JOËL AKANDE'), 'Jean-Joël Akande'); assert.equal(C.fold('Élodie TEST'), 'elodie test');
+  assert.equal(C.matricule(' 9012.0 '), '9012'); assert.equal(C.matricule('0012'), '0012'); assert.notEqual(C.matricule('0012'), C.matricule('12'));
+  assert.equal(C.displayName('LÉA DUPONT'), 'Léa Dupont'); assert.equal(C.fold('Élodie TEST'), 'elodie test');
   assert.equal(C.matricule('__proto__'), ''); assert.equal(C.normalizeService('VOOMNET FORMATION'), 'Voomnet Formation');
 });
 test('prime : début OU demande dans la fenêtre, même justifiée ou approuvée', () => {
   const s = { ...settings(), end: TODAY };
-  const sources = { absences: parseAbs([absenceRow('1000', '13/11/2026', '12/11/2026'), absenceRow('1001', '01/09/2026', '01/12/2026'), absenceRow('1002', '01/08/2026', '01/12/2026', { 'Date de fin': '05/09/2026', Justifiée: 'VRAI', 'Statut RH': 'Approuvée' })]) };
+  const sources = { absences: parseAbs([absenceRow('1000', '13/11/2026', '12/11/2026'), absenceRow('9001', '01/09/2026', '01/12/2026'), absenceRow('9002', '01/08/2026', '01/12/2026', { 'Date de fin': '05/09/2026', Justifiée: 'VRAI', 'Statut RH': 'Approuvée' })]) };
   const rows = C.evaluateAll(sources, {}, s, TODAY);
-  assert.equal(rows.find(r => r.mat === '1000').eligible, false); assert.equal(rows.find(r => r.mat === '1001').eligible, false); assert.equal(rows.find(r => r.mat === '1002').eligible, true);
+  assert.equal(rows.find(r => r.mat === '1000').eligible, false); assert.equal(rows.find(r => r.mat === '9001').eligible, false); assert.equal(rows.find(r => r.mat === '9002').eligible, true);
   assert.equal(C.inRange(s.start, s), true); assert.equal(C.inRange(s.end, s), true); assert.equal(C.inRange('2026-08-31', s), false);
 });
 test('contrôle croisé : optionnel, jours distincts, aucune absence déduite d’un statut vide', () => {
-  const sources = { pointage: parsePoint([pointRow('1000', '02/11/2026', 'Absent'), pointRow('1000', '03/11/2026', ' absent '), pointRow('1001', '02/11/2026', ''), pointRow('1002', '02/11/2026', 'Présent', '0', '')]) };
+  const sources = { pointage: parsePoint([pointRow('1000', '02/11/2026', 'Absent'), pointRow('1000', '03/11/2026', ' absent '), pointRow('9001', '02/11/2026', ''), pointRow('9002', '02/11/2026', 'Présent', '0', '')]) };
   let rows = C.evaluateAll(sources, {}, { ...settings(), crossCheck: false }, TODAY);
   assert.equal(rows.find(r => r.mat === '1000').eligible, true); assert.equal(rows.find(r => r.mat === '1000').absentDays, 2);
   rows = C.evaluateAll(sources, {}, settings(), TODAY);
-  assert.equal(rows.find(r => r.mat === '1000').eligible, false); assert.equal(rows.find(r => r.mat === '1001').eligible, true); assert.equal(rows.find(r => r.mat === '1002').avgMinutes, null);
+  assert.equal(rows.find(r => r.mat === '1000').eligible, false); assert.equal(rows.find(r => r.mat === '9001').eligible, true); assert.equal(rows.find(r => r.mat === '9002').avgMinutes, null);
 });
 test('UTF-8, BOM, Windows-1252, accents, guillemets et séparateur point-virgule', () => {
   const text = '\uFEFF' + Papa.unparse([C.ABSENCE_HEADERS, absenceRow('1000', '01/09/2026', '01/09/2026', { 'Motif détaillé': 'Rendez-vous médical été; "urgence"\nSuite' })], { delimiter: ';' });
@@ -79,27 +79,27 @@ test('codes de suivi partagés conservés, doublons exacts et conflits de pointa
   const sources = fixture(); assert.equal(sources.absences.rows.length, 5); assert.ok(sources.absences.issues.some(i => /partagé/.test(i.message)));
   const duplicate = absenceRow('1000', '01/09/2026', '01/09/2026');
   assert.equal(parseAbs([duplicate, duplicate]).rows.length, 1);
-  assert.equal(parseAbs([duplicate, absenceRow('1001', '01/09/2026', '01/09/2026')]).rows.length, 2);
+  assert.equal(parseAbs([duplicate, absenceRow('9001', '01/09/2026', '01/09/2026')]).rows.length, 2);
   const p = parsePoint([pointRow('1000', '02/11/2026', 'Présent', '0', '500'), pointRow('1000', '02/11/2026', 'Présent', '0', '500'), pointRow('1000', '02/11/2026', 'Absent')]);
   assert.equal(p.rows.length, 1); assert.equal(p.rows[0].status, 'Absent'); assert.equal(p.stats.duplicates, 2); assert.ok(p.issues.some(i => /conflit/.test(i.message)));
 });
 test('durées vides ou invalides ne deviennent pas des zéros ; lignes sans date rejetées', () => {
-  const p = parsePoint([pointRow('1000', '02/11/2026', 'Présent', '', ''), pointRow('1000', '03/11/2026', 'Présent', '-2', '-5'), pointRow('1000', '04/11/2026', 'Journée terminée', '3', '600'), pointRow('1000', 'date invalide', 'Présent', '0', '500'), ['', '1001', 'Sans matricule', '', 'Présent']]);
+  const p = parsePoint([pointRow('1000', '02/11/2026', 'Présent', '', ''), pointRow('1000', '03/11/2026', 'Présent', '-2', '-5'), pointRow('1000', '04/11/2026', 'Journée terminée', '3', '600'), pointRow('1000', 'date invalide', 'Présent', '0', '500'), ['', '9001', 'Sans matricule', '', 'Présent']]);
   assert.equal(p.rows.length, 3); assert.equal(p.stats.rejected, 2); assert.equal(p.rows[0].minutes, null); assert.equal(p.rows[1].minutes, null); assert.equal(p.rows[1].late, null);
   const r = C.evaluateAll({ pointage: p }, {}, settings(), TODAY)[0]; assert.equal(r.avgMinutes, 600); assert.equal(r.lateMinutes, 3); assert.equal(r.insufficient, true);
 });
 test('contrats : seuils 15/30, dépassement, CDI et dates manquantes', () => {
   const sources = fixture();
   for (const [end, level, days] of [['2026-11-27', 'urgent', 15], ['2026-11-28', 'warning', 16], ['2026-12-12', 'warning', 30], ['2026-12-13', 'ok', 31], ['2026-11-11', 'expired', -1]]) {
-    const r = C.evaluateAll(sources, { 1009: { end } }, settings(), TODAY).find(r => r.mat === '1009'); assert.equal(r.contractLevel, level); assert.equal(r.days, days);
+    const r = C.evaluateAll(sources, { 9009: { end } }, settings(), TODAY).find(r => r.mat === '9009'); assert.equal(r.contractLevel, level); assert.equal(r.days, days);
   }
-  const cdi = C.evaluateAll(sources, {}, settings(), TODAY).find(r => r.mat === '1002'); assert.equal(cdi.contractLevel, 'indeterminate'); assert.equal(cdi.contractAlert, false);
-  const missing = C.evaluateAll(sources, {}, settings(), TODAY).find(r => r.mat === '1001'); assert.equal(missing.contractLevel, 'missing'); assert.equal(missing.contractAlert, false);
+  const cdi = C.evaluateAll(sources, {}, settings(), TODAY).find(r => r.mat === '9002'); assert.equal(cdi.contractLevel, 'indeterminate'); assert.equal(cdi.contractAlert, false);
+  const missing = C.evaluateAll(sources, {}, settings(), TODAY).find(r => r.mat === '9001'); assert.equal(missing.contractLevel, 'missing'); assert.equal(missing.contractAlert, false);
 });
 test('fiches : remplacement explicite, valeurs vides, types inconnus et validation stricte', () => {
-  const sources = fixture(), contracts = { 1009: { type: 'CDD', end: '2026-12-01', email: 'test@example.com', active: false }, 2002: { type: 'CDI', end: null } };
-  const rows = C.evaluateAll(sources, contracts, settings(), TODAY); assert.equal(rows.find(r => r.mat === '1009').type, 'CDD'); assert.equal(rows.find(r => r.mat === '2002').type, 'CDI');
-  assert.equal(C.aggregate(rows, settings()).active, 17); assert.equal(rows.find(r => r.mat === '1009').primeStatus, 'Hors périmètre');
+  const sources = fixture(), contracts = { 9009: { type: 'CDD', end: '2026-12-01', email: 'test@example.com', active: false }, 10002: { type: 'CDI', end: null } };
+  const rows = C.evaluateAll(sources, contracts, settings(), TODAY); assert.equal(rows.find(r => r.mat === '9009').type, 'CDD'); assert.equal(rows.find(r => r.mat === '10002').type, 'CDI');
+  assert.equal(C.aggregate(rows, settings()).active, 17); assert.equal(rows.find(r => r.mat === '9009').primeStatus, 'Hors périmètre');
   assert.equal(C.normalizeProfile({ type: 'Consultante' }).type, ''); assert.throws(() => C.normalizeProfile({ type: 'Consultante' }, true), /Type/);
   assert.throws(() => C.normalizeProfile({ start: '2026-12-01', end: '2026-11-01' }, true), /précède/); assert.throws(() => C.normalizeProfile({ email: 'bad' }, true), /Email/);
   assert.equal(C.normalizeProfile({ end: '' }).end, null);
@@ -114,7 +114,7 @@ test('score transparent, motifs non scorés, données partielles et moyenne des 
   assert.equal(C.attendanceMetrics(Array.from({ length: 4 }, (_, i) => ({ date: `2026-11-0${i + 1}`, status: 'Présent', minutes: 600, late: 0 })), []).recommendation, 'Renouvellement favorable');
 });
 test('emails : variables, mailto encodé, copie RH, confidentialité et HTML échappé', () => {
-  const s = { ...settings(), rhEmail: 'rh@example.com' }, row = C.evaluateAll(fixture(), { 1009: { email: 'test+rh@example.com' } }, s, TODAY).find(r => r.mat === '1009');
+  const s = { ...settings(), rhEmail: 'rh@example.com' }, row = C.evaluateAll(fixture(), { 9009: { email: 'test+rh@example.com' } }, s, TODAY).find(r => r.mat === '9009');
   const email = C.emailFor(row, s); assert.ok(!email.subject.includes('{Nom}')); assert.ok(!email.body.includes('{Statut_Prime}')); assert.ok(email.body.includes('J-12')); assert.ok(!email.body.includes('gynecologique'));
   const href = C.mailtoHref(email); assert.ok(href.startsWith('mailto:test%2Brh@example.com?')); assert.ok(href.includes('cc=rh%40example.com')); assert.ok(href.includes('%0D%0A'));
   assert.equal(C.renderTemplate('{Inconnu} {Nom}', row, s), '{Inconnu} ' + row.name); assert.deepEqual(C.unknownVariables('{Nope} {Nom}'), ['Nope']);
@@ -125,10 +125,10 @@ test('paramètres bornés et URL de relais HTTPS sans identifiants', () => {
   assert.equal(C.safeHTTPS('http://example.com'), ''); assert.equal(C.safeHTTPS('javascript:alert(1)'), ''); assert.equal(C.safeHTTPS('https://user:secret@example.com'), ''); assert.equal(C.safeHTTPS('https://example.com/hook'), 'https://example.com/hook');
 });
 test('sauvegarde JSON versionnée, validation et clés prototype sans pollution', () => {
-  const text = '{"version":1,"contracts":{"1009":{"type":"CDD","end":"2026-12-01"},"__proto__":{"active":false}}}';
+  const text = '{"version":1,"contracts":{"9009":{"type":"CDD","end":"2026-12-01"},"__proto__":{"active":false}}}';
   assert.throws(() => C.parseProfileExport(text), /Matricule invalide/);
-  const parsed = C.parseProfileExport(JSON.stringify({ version: 1, contracts: { 1009: { end: '2026-12-01' } } })); assert.equal(parsed.contracts['1009'].end, '2026-12-01'); assert.equal(Object.getPrototypeOf(parsed.contracts), null);
-  assert.throws(() => C.parseProfileExport('{"version":2,"contracts":{}}'), /version 1/); assert.throws(() => C.parseProfileExport('{"version":1,"contracts":{"1009":{"end":"bad"}}}'), /Date/);
+  const parsed = C.parseProfileExport(JSON.stringify({ version: 1, contracts: { 9009: { end: '2026-12-01' } } })); assert.equal(parsed.contracts['9009'].end, '2026-12-01'); assert.equal(Object.getPrototypeOf(parsed.contracts), null);
+  assert.throws(() => C.parseProfileExport('{"version":2,"contracts":{}}'), /version 1/); assert.throws(() => C.parseProfileExport('{"version":1,"contracts":{"9009":{"end":"bad"}}}'), /Date/);
 });
 test('exports : protection des formules CSV et rapport numérique', () => {
   for (const value of ['=1+1', '+cmd', '-cmd', '@SUM(1)', '\tformula']) assert.equal(C.safeCSVCell(value), "'" + value);
