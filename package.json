@@ -8,7 +8,9 @@
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/core.test.cjs",
     "test:browser": "node tests/browser.mjs",
-    "test:cloud": "node --test tests/cloud.test.mjs"
+    "test:cloud": "node --test tests/cloud.test.mjs",
+    "admin:create-user": "node scripts/create-rh-user.mjs",
+    "test:admin": "node --test tests/admin-auth.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.0",
