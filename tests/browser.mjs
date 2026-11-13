@@ -18,7 +18,22 @@ async function mockAuthorized(ctx) {
   const base = 'https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth';
   const cors = { 'access-control-allow-origin': 'http://127.0.0.1:3000', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-expose-headers': 'set-auth-jwt', 'set-auth-jwt': 'header.payload.signature' };
   await ctx.route(base + '/**', route => route.request().method() === 'OPTIONS' ? route.fulfill({ status: 204, headers: cors }) : route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ user: { id: 'browser-test', email: 'rh@example.invalid' }, session: { id: 'session-test', token: 'opaque', userId: 'browser-test', expiresAt: '2030-01-01T00:00:00.000Z' } }) }));
-  await ctx.route('**/.netlify/functions/workspace', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"version":0,"snapshot":null}' }));
+  let version = 0, snapshot = { version: 1, contracts: {}, settings: {} }, active = { employees: null, absences: null, pointage: null }, sequence = 0; const imports = {};
+  await ctx.route('**/.netlify/functions/workspace**', async route => {
+    const req = route.request(), u = new URL(req.url()), action = u.searchParams.get('action'); let response;
+    if (req.method() === 'GET' && action === 'source') response = { source: imports[u.searchParams.get('id')] };
+    else if (req.method() === 'GET' && action === 'history') response = { history: { employees: [], absences: [], pointage: [] } };
+    else if (req.method() === 'GET') response = { version, snapshot, active };
+    else {
+      const data = req.postDataJSON();
+      if (data.expectedVersion !== version) return route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"Conflit"}' });
+      if (action === 'import') { const id = String(++sequence); imports[id] = data.source; active[data.kind] = id; }
+      else if (action === 'remove') active[data.kind] = null;
+      else if (req.method() === 'PUT') snapshot = data.snapshot;
+      response = { version: ++version };
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
+  });
 }
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan', acceptDownloads: true });
 await mockAuthorized(context);
@@ -110,9 +125,10 @@ try {
   const exportedWB = XLSX.read(readFileSync(xlsxPath), { type: 'buffer' }); assert.ok(exportedWB.SheetNames.includes('Décisions RH')); assert.equal(XLSX.utils.sheet_to_json(exportedWB.Sheets['Décisions RH']).length, 18);
   await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; }); await page.locator('[data-action="toggle-export"]').click(); await page.locator('[data-action="print"]').click(); assert.equal(await page.evaluate(() => window.__printed), 1); assert.match(await page.locator('#print-report').innerText(), /Rapport de décision/);
   const profilePath2 = await download(async () => { await nav('imports'); await page.locator('[data-action="profile-export"]').click(); }, 'profiles-no-secret.json'); assert.ok(!readFileSync(profilePath2, 'utf8').includes('session-secret-do-not-persist'));
+  await page.getByRole('button', { name: 'Espace RH en ligne' }).click(); await page.getByText('Sauvegarder fiches et paramètres').click(); await page.getByText('Fiches et paramètres enregistrés.').waitFor(); await page.locator('#cloud-close').click();
   await page.reload({ waitUntil: 'networkidle' }); await page.locator('#application').waitFor({ state: 'visible' }); await nav('settings'); assert.equal(await domValue('#webhook-token'), ''); assert.ok(!(await page.evaluate(() => localStorage.getItem('voomnet-rh:v1'))).includes('session-secret-do-not-persist')); step('Webhook simulé, exports CSV/XLSX/PDF, jeton Bearer jamais persisté');
   assert.deepEqual(errors, []);
-  const auditContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan' }); await mockAuthorized(auditContext); const auditPage = await auditContext.newPage(); await auditPage.goto(url, { waitUntil: 'networkidle' }); await auditPage.locator('#application').waitFor({ state: 'visible' });
+  const auditContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan' }); await mockAuthorized(auditContext); const auditPage = await auditContext.newPage(); await auditPage.goto(url, { waitUntil: 'networkidle' }); await auditPage.locator('#application').waitFor({ state: 'visible' }).catch(async e => { console.log('AUDIT LOGIN', await auditPage.locator('#login-message').innerText()); throw e; });
   const violations = [];
   for (const destination of ['overview', 'contracts', 'imports', 'emails', 'settings']) {
     await auditPage.evaluate(destination => document.querySelector(`#main-nav [data-page="${destination}"], #tools-nav [data-page="${destination}"]`).click(), destination);

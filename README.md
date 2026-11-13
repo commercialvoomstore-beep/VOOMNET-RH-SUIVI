@@ -24,12 +24,11 @@ Application d’aide à la décision pour le suivi des **primes trimestrielles**
 
 Les sources sont dans `src/`, les fichiers **fictifs** de démonstration dans `data/`, et le fichier HTML généré à la racine. Pour commencer en tant que RH :
 
-1. Connectez-vous avec votre compte individuel autorisé.
-2. Ouvrez **Espace RH en ligne → Charger depuis la base** avant toute sauvegarde. Si la base est vide, l’interface le signale.
-3. Dans **Données & imports**, importez les absences, le pointage et, si disponible, le référentiel des collaborateurs. Le bouton de démonstration charge uniquement des données fictives.
-4. Vérifiez les dates, les anomalies, le périmètre actif, les décisions de prime et les contrats ; configurez les alertes si nécessaire.
-5. Choisissez **Espace RH en ligne → Sauvegarder dans la base** pour partager les données. La sauvegarde n’est **pas automatique**.
-6. Exportez les informations nécessaires et déconnectez-vous, surtout sur un poste partagé. La déconnexion efface l’espace local et les modifications non sauvegardées, pas la base partagée.
+1. Connectez-vous avec votre identifiant numérique et votre mot de passe ; votre compte doit avoir été créé et autorisé par l’administrateur.
+2. Dans **Données & imports**, importez les absences, le pointage et, si disponible, le référentiel des collaborateurs. Chaque import réussi est enregistré automatiquement dans votre espace personnel. Le bouton de démonstration charge uniquement des données fictives.
+3. Vérifiez les dates, les anomalies, le périmètre actif, les décisions de prime et les contrats ; configurez les alertes si nécessaire.
+4. Depuis **Espace RH en ligne**, sauvegardez séparément les fiches et paramètres. Consultez **Historique des imports** pour rétablir une version précédente. L’actualisation charge la version enregistrée et remplace les modifications locales non sauvegardées.
+5. Exportez les résultats nécessaires et déconnectez-vous, surtout sur un poste partagé. Les imports restent en base ; les fiches et paramètres non sauvegardés peuvent être perdus.
 
 ## Données d’entrée
 
@@ -43,7 +42,7 @@ Les sources sont dans `src/`, les fichiers **fictifs** de démonstration dans `d
 - Classeurs **XLSX / XLS** via SheetJS.
 - Jointure stricte par matricule : `Matricule 3CX = Matricule = Numéro 3CX`.
 - Normalisation de casse/accents pour la recherche et l’affichage, sans fusion approximative par nom.
-- Limites de protection : 10 Mo par fichier, 50 000 lignes, 100 colonnes.
+- Limites de protection : 10 Mo par fichier, 50 000 lignes, 100 colonnes ; chaque requête à la base est limitée à 4 Mio de JSON traité. Un fichier de moins de 10 Mo peut donc être refusé si les données transformées dépassent cette limite. Un import refusé ne remplace pas la version active.
 - Les en-têtes manquants, guillemets CSV invalides et lignes sans matricule/date exploitable sont signalés ; un import échoué ne remplace pas les données précédentes.
 - Le fichier de référentiel est facultatif pour démarrer ; il enrichit les fiches avec contrat et email. Les colonnes du référentiel listées ci-dessous, sauf `Contact`, sont attendues si ce fichier est importé.
 - Les doublons exacts sont écartés ; les conflits de pointage pour un même matricule/date retiennent la dernière ligne et sont tracés.
@@ -92,7 +91,7 @@ Par exemple, pour une date du jour fixée au **12 novembre 2026**, la période p
 ### Contrats et aide à la décision
 
 - Champs éditables par matricule : type (`CDD`, `CDI`, `Stage`, `Essai`), début, fin, email professionnel, inclusion dans le périmètre actif.
-- Sauvegarde `localStorage`, export/import JSON, valeurs source rétablissables.
+- Sauvegarde locale `localStorage`, sauvegarde en ligne manuelle des fiches et paramètres, export/import JSON, valeurs source rétablissables.
 - Jours restants calculés par rapport à la date du jour : rouge ≤ 15 jours ou échu, orange 16–30, vert > 30. CDI sans échéance et dates manquantes ont des statuts neutres explicites.
 - Seuil d’alerte configurable : J-15, J-30, J-45 ou J-60.
 - Les fichiers ne fournissent pas de statut d’activité fiable : tous les collaborateurs sont inclus par défaut dans le périmètre actif, à confirmer par le RH.
@@ -123,7 +122,7 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 - Envoi groupé **uniquement après confirmation explicite** des destinataires et du prestataire.
 - **EmailJS** : Service ID, Template ID, clé publique. Le modèle doit consommer `to_email`, `cc_email`, `subject`, `message`.
 - **Webhook HTTPS** : relais serveur pour Microsoft Graph ou SMTP. Payload JSON documenté dans l’interface. Le jeton Bearer facultatif reste en mémoire de session et n’est jamais écrit dans le stockage ou les exports.
-- Microsoft Graph nécessite OAuth côté serveur ; SMTP n’est pas un protocole navigateur. Aucun mot de passe SMTP ni secret Graph ne doit être saisi dans le HTML.
+- Microsoft Graph nécessite OAuth côté serveur ; SMTP n’est pas un protocole navigateur. Aucun mot de passe SMTP ni secret Graph ne doit être saisi dans le HTML. Le relais sécurisé n’est pas fourni par ce projet et doit être configuré séparément. Si Outlook est en panne sur le web et l’ordinateur, `mailto:` peut aussi échouer ; une panne du fournisseur peut affecter Graph/SMTP. EmailJS ou un autre relais n’est une solution que s’il est opérationnel et configuré.
 - Les motifs médicaux, le score et les recommandations défavorables ne sont pas inclus dans les emails.
 - « Accepté par l’API » signifie acceptation de la requête, pas remise confirmée. Aucun renvoi automatique n’est effectué.
 
@@ -136,54 +135,52 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
 ## Confidentialité et sécurité
 
-- Les fichiers sont lus et calculés dans le navigateur. Au chargement, Neon Auth est consulté ; si une session existe, la fonction RH vérifie ses droits. Une sauvegarde en ligne explicitement demandée transmet les sources, contrats et paramètres à l’API Netlify puis à Neon.
-- Un envoi API ne transmet les données qu’après validation explicite, au prestataire configuré.
-- Le `localStorage` n’est pas un coffre-fort chiffré : sur poste partagé, exporter puis effacer les données locales.
-- Les fichiers sources locaux ne sont pas conservés après actualisation ; les fiches contractuelles et paramètres le sont. Une sauvegarde partagée explicite est conservée en base. La démonstration fictive est réintégrée au HTML.
-- Ne jamais committer de jeton GitHub, mot de passe SMTP, secret Graph ou clé privée. Un jeton publié dans une conversation doit être révoqué.
+- Les calculs sont effectués dans le navigateur. Chaque import validé est transmis automatiquement à l’API Netlify et stocké dans une table propre à son type, avec historique. Les fiches et paramètres sont enregistrés en ligne uniquement sur demande ; ils sont aussi stockés localement.
+- Chaque requête est authentifiée et filtrée par l’identifiant Neon du compte : un compte ne voit pas les imports ou fiches des autres. Cette isolation dépend de la sécurité de l’API, de PostgreSQL et de la configuration ; un administrateur de base y a accès.
+- Les imports précédents restent en base même lorsqu’on retire la version active. L’historique est paginé par 100. Prévoir sauvegarde, durée de rétention et procédure de suppression conformes aux règles RH.
+- Le `localStorage` n’est pas chiffré. Sur un poste partagé, déconnectez-vous et protégez la session du poste ; un export reste accessible là où il a été enregistré. Les données déjà téléchargées ou consultées ne sont pas effacées par une révocation.
+- Les fichiers statiques et la démonstration fictive sont publics. Ne jamais intégrer de données réelles ni de secrets dans le HTML ou Git.
 
 ## Connexion au service RH
 
-La page de connexion s’affiche dès l’ouverture. Aucun compte ou mot de passe par défaut n’est intégré : les comptes individuels doivent être créés dans Neon Auth **et** autorisés dans `rh_users`. Après authentification, l’API vérifie les droits avant d’afficher l’application. Si le compte n’est pas autorisé, son identifiant est affiché pour permettre à l’administrateur de l’activer. Une panne de Neon ou de l’API maintient l’écran de connexion fermé à l’application ; la connexion internet est donc nécessaire, y compris après actualisation.
+La page de connexion demande un identifiant numérique de 1 à 16 chiffres et un mot de passe. Pour utiliser Neon Auth email/mot de passe sans exposer une adresse à l’utilisateur, le client transforme l’identifiant en alias technique : par exemple `1005` devient `1005@rh-identifiant.invalid`. Il ne s’agit **pas d’une boîte mail**. Le compte correspondant doit être créé explicitement dans Neon Auth et son identifiant interne autorisé dans `rh_users`. Aucun compte 1005 ni mot de passe n’est créé par le code.
 
-Depuis **Espace RH en ligne**, l’utilisateur peut ensuite charger/sauvegarder la base ou se déconnecter. La déconnexion efface l’espace local et retourne à l’écran de connexion ; sauvegardez d’abord les modifications importantes. Une session restaurée est revalidée par l’API. Les droits sont également contrôlés côté serveur à chaque lecture et écriture ; un refus ou une session expirée lors d’une opération renvoie à la connexion. Une révocation n’efface pas rétroactivement les données déjà consultées ou exportées, et l’écran ne vérifie pas continuellement une session inactive.
+L’acceptation de l’alias `.invalid`, les réglages de vérification d’email et la connexion doivent être vérifiés dans le projet Neon réel. La récupération de mot de passe par email ne peut pas fonctionner avec cet alias non distribuable : prévoir une procédure administrative sécurisée de réinitialisation et de remise du mot de passe, ainsi que limitation des tentatives, surveillance et politique de mots de passe adaptées. Ne pas désactiver des protections sans évaluation. Neon Auth reste responsable du contrôle du mot de passe ; l’API ajoute le contrôle d’accès RH.
 
-**Limite importante :** la page HTML et son code, ainsi que les données de démonstration fictives, sont des fichiers statiques publics. Le masquage de l’interface dans le navigateur n’est pas une protection serveur du fichier HTML. Les données RH partagées, elles, restent derrière la fonction et sa vérification d’autorisation. Ne jamais embarquer de données confidentielles dans le HTML. Sur poste partagé, le stockage navigateur n’est pas un coffre chiffré : déconnectez-vous et protégez la session du poste.
+La session et les droits sont vérifiés au chargement et à chaque opération en ligne, pas en continu pendant l’inactivité. Une panne de Neon ou de l’API empêche l’accès. La déconnexion efface les données locales, mais ne supprime pas les données en base. Les cookies tiers peuvent être bloqués par certains navigateurs ; vérifier les domaines de confiance, CORS et les cookies en conditions réelles.
 
 ## Déploiement Netlify + Neon (configuration manuelle requise)
 
-**Attention : cette intégration est préparée dans le dépôt, mais n’est pas configurée ni testée sur un projet Neon réel depuis cet environnement.** Ne pas y stocker de données réelles tant que l’accès, les sauvegardes et la sécurité n’ont pas été vérifiés de bout en bout.
+**Préparation non déployée ni testée sur Neon réel.** Ne pas importer de données réelles avant validation de bout en bout et des mesures de sécurité.
 
-1. Révoquer toute clé S3 ou tout jeton exposé, et ne générer un remplacement que si nécessaire. Le stockage S3 n’est pas utilisé par cette intégration. Ne jamais partager `DATABASE_URL`, mot de passe, clés S3 ou secrets dans la conversation, dans Git ou dans le navigateur.
-2. Le dépôt GitHub a déjà contenu des données RH réelles dans `main` et son historique. Les données de démonstration de la **version courante** sont fictives, mais ceci ne supprime ni l’historique, ni les clones, ni les anciens déploiements. Restreindre immédiatement le dépôt et les anciens sites, puis organiser une purge de l’historique et une réponse adaptée à l’exposition avec les responsables concernés.
-3. Dans Neon, sélectionner le projet `lingering-hill-77521227` et la bonne branche/base `neondb`. À l’aide de l’éditeur SQL propriétaire, exécuter [`database/001_initial.sql`](database/001_initial.sql). Le script est idempotent et ne crée pas d’utilisateurs. Il crée `rh_users` (liste d’accès explicite), `rh_workspace` (espace partagé versionné), et `rh_audit` (identifiant, action, version, date ; sans contenu RH).
-4. Activer Neon Auth et l’authentification email/mot de passe, ainsi que la vérification des adresses. Créer/inviter individuellement les comptes RH par les moyens administratifs de Neon. Ajouter l’origine HTTPS exacte du site Netlify aux domaines/origines de confiance Neon Auth, et vérifier CORS et les cookies inter-sites. L’URL Auth intégrée dans `src/cloud.js` correspond au projet communiqué ; pour une autre branche/projet, la modifier et reconstruire. Les navigateurs bloquant les cookies tiers peuvent empêcher la connexion ; tester dans les navigateurs utilisés par l’équipe.
-5. Chaque compte doit aussi être autorisé **explicitement** dans PostgreSQL : après vérification de l’identité auprès de l’administrateur, récupérer son `id` Neon Auth (affiché sur la page de connexion si le compte est authentifié mais non autorisé, ou consultable dans la console Neon), puis exécuter dans l’éditeur SQL :
+1. Révoquer et remplacer les secrets et mots de passe divulgués. Ne jamais communiquer secrets, mots de passe ou `DATABASE_URL` dans le chat ou Git. Les clés S3 ne sont pas utilisées ici.
+2. Le dépôt et ses anciens déploiements ont déjà exposé des données RH réelles. Les fichiers courants sont fictifs, mais les anciens commits, clones et déploiements peuvent rester accessibles. Restreindre les accès et organiser une purge avec les responsables concernés.
+3. **Sauvegarder et vérifier une restauration avant migration**. Sur une copie ou branche de test Neon, appliquer [`database/001_initial.sql`](database/001_initial.sql), puis [`database/002_individual_imports.sql`](database/002_individual_imports.sql). La migration est additive : elle conserve `rh_workspace` et crée `rh_personal_workspace`, `rh_import_employees`, `rh_import_absences`, `rh_import_pointage`. L’ancien espace partagé n’est **pas** transféré automatiquement : décider avec les responsables quel compte peut recevoir quelles données et migrer ou réimporter explicitement après contrôle. Ne pas supprimer l’ancien espace avant validation et sauvegarde.
+4. Activer Neon Auth email/mot de passe. Par un moyen administratif sécurisé, créer chaque compte avec l’alias technique approprié, par exemple `1005@rh-identifiant.invalid`, et un mot de passe distinct non divulgué. Neon documente la [création administrative](https://neon.com/docs/auth/guides/plugins/admin) et la réinitialisation de mot de passe ; tester au préalable les conditions d’acceptation et de vérification de l’alias. Restreindre l’inscription publique si possible ; ne jamais autoriser automatiquement toute inscription. Ajouter l’origine HTTPS exacte du site aux origines de confiance Neon. L’URL Auth est intégrée dans `src/cloud.js` : si le projet change, la modifier et reconstruire.
+5. Récupérer l’**identifiant interne** `user.id` de Neon Auth (différent de `1005`) depuis la console ou le message affiché après connexion d’un compte non autorisé. Dans l’éditeur SQL de la base, autoriser explicitement chaque personne :
 
    ```sql
-   INSERT INTO rh_users (user_id, active) VALUES ('ID_UTILISATEUR_NEON_AUTH', true)
+   INSERT INTO rh_users (user_id, active) VALUES ('ID_INTERNE_NEON_AUTH', true)
    ON CONFLICT (user_id) DO UPDATE SET active = true;
    ```
 
-   Remplacer la valeur par l’identifiant réel, jamais par un email. Un compte créé mais absent/inactif dans `rh_users` reçoit 403. Pour le retirer : `UPDATE rh_users SET active = false WHERE user_id = 'ID_UTILISATEUR_NEON_AUTH';` Ne pas autoriser automatiquement tous les comptes inscrits. Tous les comptes autorisés ont les **mêmes droits** sur l’ensemble des données ; il n’y a pas de rôles distincts ni de cloisonnement par service.
-6. Connecter le site Netlify existant au dépôt GitHub et déployer la branche contenant ces changements après leur intégration dans la branche de production. Le fichier `netlify.toml` utilise Node 22, reconstruit `index.html`, publie uniquement `public/` et déploie la fonction `workspace`. Ne pas publier la racine du dépôt. Vérifier les réglages Netlify existants : ils ne doivent pas remplacer cette commande ou ce répertoire par l’ancienne configuration.
-7. Dans **Netlify → Site configuration → Environment variables**, configurer pour la fonction serveur (et le contexte de déploiement concerné) :
+   Remplacer la valeur par l’identifiant réel vérifié, pas l’alias ni le mot de passe. Pour révoquer l’accès : `UPDATE rh_users SET active = false WHERE user_id = 'ID_INTERNE_NEON_AUTH';`. Les comptes autorisés ont les mêmes fonctionnalités, mais des espaces individuels distincts.
+6. Déployer la branche intégrée au site Netlify. `netlify.toml` construit `index.html`, publie seulement `public/` et déploie la fonction `workspace` avec Node 22. Vérifier que les réglages du site ne remplacent pas cette configuration.
+7. Dans **Netlify → Site configuration → Environment variables**, définir pour la fonction et le contexte concernés :
 
    | Variable | Valeur |
    |---|---|
-   | `DATABASE_URL` | URL PostgreSQL Neon avec TLS, fournie par Neon ; **secrète**, côté serveur uniquement. Utiliser de préférence un rôle applicatif distinct à privilèges minimaux. |
+   | `DATABASE_URL` | URL PostgreSQL Neon avec TLS ; secrète, côté serveur uniquement. Utiliser un rôle applicatif à privilèges minimaux. |
    | `NEON_AUTH_BASE_URL` | `https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth` |
    | `NEON_AUTH_JWKS_URL` | `https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json` |
-   | `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site, par exemple `https://votre-site.netlify.app`, sans chemin ni slash final. |
+   | `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site, sans chemin ni slash final. |
 
-   `DATABASE_URL` n’est pas une URL S3. Après modification des variables, redéployer. Pour chaque contexte ou domaine de prévisualisation, configurer explicitement son origine et sa base isolée ; ne pas ouvrir l’accès aux aperçus publics de production.
-8. La fonction exige un JWT Neon valide (signature JWKS, émetteur, audience, échéance), puis vérifie `rh_users` dans la base à chaque requête. Lecture et écriture sont journalisées. Un compte non listé ne peut pas accéder à la base même s’il peut se connecter à Neon Auth. Un jeton existant peut rester valable jusqu’à son expiration ; désactiver le compte dans `rh_users` bloque immédiatement l’API.
-9. À l’ouverture, se connecter sur la page RH. Dans l’application : **Espace RH en ligne → Charger depuis la base**. Si la base est vide, importer les fichiers réels puis choisir **Sauvegarder dans la base**. La sauvegarde est manuelle, limitée à 4 Mo de JSON par espace partagé, et protège contre les écrasements concurrents par un numéro de version. En cas de conflit, préserver/exporter les modifications locales avant de recharger : le chargement remplace l’espace local. L’export JSON conserve les fiches et paramètres, pas les fichiers sources ; conservez ceux-ci séparément pour pouvoir les réimporter. Déconnexion : l’espace de travail et les paramètres de ce navigateur sont effacés, pas la base ; les modifications non enregistrées sont perdues.
-10. Vérifier avec deux comptes fictifs : refus d’un utilisateur non autorisé, chargement/sauvegarde, conflit, déconnexion et restauration ; vérifier aussi chiffrement, rétention, sauvegardes, disponibilité, journal d’accès et conformité applicables aux données RH et médicales. Ne pas considérer un test simulé comme un test réel du service.
+   Redéployer après modification. Utiliser des données et une base isolées pour les prévisualisations, pas la production ouverte à tous.
+8. Vérifier sur un environnement de test : connexion 1005, mauvais mot de passe, utilisateur non autorisé, deux comptes isolés, import, historique, restauration, sauvegarde des fiches, conflit, déconnexion et rechargement. Contrôler les JWT réellement émis (signature EdDSA, issuer et audience attendus), CORS et cookies ; les mocks ne prouvent pas la compatibilité du service réel. Vérifier sauvegardes, chiffrement, rétention et conformité RH avant toute production.
 
-### Privilèges recommandés pour le rôle PostgreSQL de l’application
+### Privilèges PostgreSQL recommandés
 
-Créer le rôle via les outils Neon sans inscrire son mot de passe dans Git. Avec un propriétaire de base, adapter les noms selon votre configuration, puis attribuer **uniquement** `SELECT` sur `rh_users`, `SELECT, UPDATE` sur `rh_workspace`, `INSERT` sur `rh_audit` et `USAGE` sur la séquence d’identité `rh_audit_id_seq` ; le rôle ne doit pas pouvoir modifier `rh_users`, le schéma, ni les tables Neon Auth. Utiliser ce rôle dans `DATABASE_URL`. Tester ces droits sur une base isolée avant mise en production.
+Avec un propriétaire de base, attribuer au rôle applicatif uniquement `SELECT` sur `rh_users`, `SELECT, INSERT, UPDATE` sur `rh_personal_workspace`, `SELECT, INSERT` sur les trois tables d’import, `INSERT` sur `rh_audit` et `USAGE` sur leurs séquences d’identité. Ne pas donner les droits de modification de `rh_users`, du schéma ou des tables Neon Auth. Créer le rôle et gérer son mot de passe hors Git ; tester les privilèges sur une base isolée.
 
 ## Dépannage
 
@@ -193,7 +190,7 @@ Créer le rôle via les outils Neon sans inscrire son mot de passe dans Git. Ave
 | « Compte non autorisé » | Vérifier l’`id` retourné par Neon Auth et l’entrée active dans `rh_users`. Vérifier aussi l’origine autorisée si la réponse est 403. |
 | Service RH indisponible ou non configuré | Variables Netlify, redéploiement, URL PostgreSQL/TLS, droits du rôle et exécution du schéma SQL. Le serveur local `npm start` ne fournit pas l’API. |
 | Conflit lors de la sauvegarde | Une autre version a été enregistrée. Préserver/exporter les modifications locales, puis recharger avant de sauvegarder ; le rechargement remplace l’espace local. |
-| Sauvegarde trop volumineuse | La limite est de 4 Mo pour le JSON de l’espace partagé, distincte de la limite d’import de 10 Mo par fichier. |
+| Sauvegarde trop volumineuse | La limite est de 4 Mio de JSON par requête, distincte de la limite d’import de 10 Mo par fichier. Réduire le fichier traité puis réessayer. |
 | Déconnexion distante non confirmée | Les données locales sont effacées, mais la fin de session distante n’est pas garantie. Fermer le navigateur et contacter l’administrateur. |
 
 ## Développement
@@ -212,8 +209,9 @@ Le serveur écoute sur le port `3000` par défaut (`PORT` permet de le modifier)
 |---|---|
 | `src/app.html`, `src/styles.css`, `src/app.js` | Interface, styles, imports et stockage local. |
 | `src/core.js` | Règles métier, analyse des fichiers, scores et exports. |
-| `src/cloud.js` | Connexion Neon Auth et actions de l’espace partagé. |
+| `src/cloud.js` | Connexion Neon Auth et actions de l’espace personnel et historique des imports. |
 | `database/001_initial.sql` | Schéma PostgreSQL initial. |
+| `database/002_individual_imports.sql` | Migration additive pour les espaces individuels et historiques. |
 | `netlify/functions/workspace.mjs` | API RH, autorisations, sauvegarde versionnée et audit. |
 | `netlify.toml` | Commande de build, dossier publié et fonctions Netlify. |
 | `scripts/build.mjs` | Génération de `index.html` depuis les sources et les données fictives. |
