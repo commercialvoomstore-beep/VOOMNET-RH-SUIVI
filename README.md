@@ -197,6 +197,12 @@ L’outil s’exécute **sur l’ordinateur de l’administrateur**, dans un ter
 
 **Important :** la compatibilité réelle de l’alias `.invalid`, des points d’accès et du cookie Neon n’a pas été vérifiée ici. Si Neon exige une vérification par email, l’alias ne peut pas recevoir le message ; prévoir une procédure administrative sécurisée, sans désactiver de protection sans évaluation. Le mot de passe ne peut pas être réinitialisé par email sur cet alias. En cas d’interruption ou de réponse serveur incertaine, le compte peut avoir été créé : vérifier dans Neon avant de réessayer. Si la déconnexion administrateur n’est pas confirmée, révoquer la session dans Neon. Ne jamais modifier directement les tables internes Neon Auth ni enregistrer un mot de passe dans SQL ou Git.
 
+### Autoriser un utilisateur RH depuis SQL Editor
+
+Après création du compte et de son mot de passe dans Neon Auth, le script [`database/003_autoriser_utilisateur_rh.sql`](database/003_autoriser_utilisateur_rh.sql) autorise un compte existant dans `rh_users`. Il est préparé pour l'identifiant `1005`. Dans le script, remplacer `ID_INTERNE_NEON_AUTH` par le véritable `id` du compte, vérifié dans **Auth → Users**. Pour un autre compte, modifier aussi `identifiant_rh` (1 à 16 chiffres) ; le script vérifie que l’alias technique et l’ID interne désignent le même compte.
+
+Copier le fichier entier dans le **SQL Editor**, sélectionner la bonne branche/base et l’exécuter avec un rôle ayant les droits de lecture sur `neon_auth.user` et d’écriture sur `public.rh_users`. Les migrations `001` et `002` doivent déjà être appliquées. Le script est relançable : il ne réactive pas automatiquement un compte désactivé. L’espace personnel est initialisé par l’API à la première connexion autorisée. Il ne crée ni compte d’authentification ni mot de passe et n’est pas une migration automatique de l’ancien espace partagé. Ne jamais inscrire de mot de passe dans SQL.
+
 ### Privilèges PostgreSQL recommandés
 
 Avec un propriétaire de base, attribuer au rôle applicatif uniquement `SELECT` sur `rh_users`, `SELECT, INSERT, UPDATE` sur `rh_personal_workspace`, `SELECT, INSERT` sur les trois tables d’import, `INSERT` sur `rh_audit` et `USAGE` sur leurs séquences d’identité. Ne pas donner les droits de modification de `rh_users`, du schéma ou des tables Neon Auth. Créer le rôle et gérer son mot de passe hors Git ; tester les privilèges sur une base isolée.
@@ -231,6 +237,7 @@ Le serveur écoute sur le port `3000` par défaut (`PORT` permet de le modifier)
 | `src/cloud.js` | Connexion Neon Auth et actions de l’espace personnel et historique des imports. |
 | `database/001_initial.sql` | Schéma PostgreSQL initial. |
 | `database/002_individual_imports.sql` | Migration additive pour les espaces individuels et historiques. |
+| `database/003_autoriser_utilisateur_rh.sql` | Autorisation SQL d’un compte Neon Auth existant. |
 | `netlify/functions/workspace.mjs` | API RH, autorisations, sauvegarde versionnée et audit. |
 | `netlify.toml` | Commande de build, dossier publié et fonctions Netlify. |
 | `scripts/build.mjs` | Génération de `index.html` depuis les sources et les données fictives. |
@@ -245,6 +252,7 @@ Lancer le serveur local (`npm start`) dans un premier terminal, puis dans un sec
 npm test                      # règles métier
 npm run test:cloud            # API et vérification JWT, base simulée
 npm run test:admin            # outil de création RH et sécurité, Neon simulé
+node --test tests/sql-user.test.mjs  # script SQL, base et Neon Auth simulés
 npm run test:browser          # parcours navigateur et accessibilité
 node tests/cloud-browser.mjs  # connexion et API simulées
 ```
