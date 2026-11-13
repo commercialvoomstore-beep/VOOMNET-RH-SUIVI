@@ -35,4 +35,4 @@ for (const [marker, content] of Object.entries({ CSS: `<style>\n${css}\n</style>
 }
 html = html.replace('</head>', () => `<script type="text/plain" id="third-party-licenses">${licenses.replace(/<\/script/gi, '<\\/script')}</script>\n</head>`);
 writeFileSync(resolve(root, 'index.html'), html);
-console.log(`index.html built: ${(Buffer.byteLength(html) / 1024 / 1024).toFixed(2)} MiB. No runtime CDN or network dependency.`);
+console.log(`index.html built: ${(Buffer.byteLength(html) / 1024 / 1024).toFixed(2)} MiB. No runtime CDN; Neon Auth and the RH API require a network connection.`);

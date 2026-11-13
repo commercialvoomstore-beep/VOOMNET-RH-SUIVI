@@ -1,12 +1,12 @@
 # Voomnet RH — Gestion des Primes Trimestrielles & Contrats
 
 Application web d’aide à la décision RH, **en un seul fichier HTML autonome** : [`index.html`](index.html).
-Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et la démonstration Voomnet sont intégrés au fichier. Aucun CDN ni serveur applicatif n’est nécessaire pour le mode local. Le partage en ligne nécessite Netlify Functions, Neon Auth et PostgreSQL.
+Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et la démonstration Voomnet sont intégrés au fichier. Aucun CDN n’est nécessaire. Depuis l’ajout de la connexion RH, l’accès à l’interface exige Neon Auth, la fonction Netlify, PostgreSQL et une connexion internet.
 
 ## Démarrage
 
-- **Usage direct** : ouvrir `index.html` dans un navigateur récent.
-- **Aperçu local** : `npm install` puis `npm start` (port `3000`, configurable via `PORT`).
+- **Usage en ligne** : ouvrir le site Netlify configuré, puis se connecter avec un compte RH autorisé. Le fichier `index.html` seul, sans API et connexion, affiche la page de connexion mais ne débloque pas l’application.
+- **Aperçu local** : `npm install` puis `npm start` (port `3000`, configurable via `PORT`). Ce serveur statique permet de visualiser la page de connexion, mais ne fournit pas la fonction Netlify ; la connexion réelle ne fonctionnera pas sans environnement Netlify et configuration Neon.
 - **Régénérer le fichier autonome** : `npm run build`.
 - **Tests** : `npm test` (moteur de règles) et `npm run test:browser` (nécessite `npm start` dans un autre terminal).
 
@@ -92,7 +92,7 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
 ## Confidentialité et sécurité
 
-- Les fichiers sont lus et calculés dans le navigateur. Au chargement initial, l’application ne fait aucune requête externe. Une sauvegarde en ligne explicitement demandée transmet les sources, contrats et paramètres à l’API Netlify puis à Neon.
+- Les fichiers sont lus et calculés dans le navigateur. Au chargement, Neon Auth et la fonction RH sont consultés pour vérifier la session. Une sauvegarde en ligne explicitement demandée transmet les sources, contrats et paramètres à l’API Netlify puis à Neon.
 - Un envoi API ne transmet les données qu’après validation explicite, au prestataire configuré.
 - Le `localStorage` n’est pas un coffre-fort chiffré : sur poste partagé, exporter puis effacer les données locales.
 - Les fichiers sources locaux ne sont pas conservés après actualisation ; les fiches contractuelles et paramètres le sont. Une sauvegarde partagée explicite est conservée en base. La démonstration fictive est réintégrée au HTML.
@@ -106,6 +106,14 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 - `scripts/build.mjs` : inline CSS, bibliothèques, police, démonstration et licences dans `index.html`.
 - SheetJS est embarqué via la distribution npm `@e965/xlsx` 0.20.3 (miroir communautaire de SheetJS), avec PapaParse 5.5.3, Lucide 0.468.0 et Inter.
 - Les tests navigateur utilisent Playwright et un Chromium embarqué via `@sparticuz/chromium` pour éviter tout téléchargement depuis un CDN de navigateurs.
+
+## Connexion au service RH
+
+La page de connexion s’affiche dès l’ouverture. Aucun compte ou mot de passe par défaut n’est intégré : les comptes individuels doivent être créés dans Neon Auth **et** autorisés dans `rh_users`. Après authentification, l’API vérifie les droits avant d’afficher l’application. Si le compte n’est pas autorisé, son identifiant est affiché pour permettre à l’administrateur de l’activer. Une panne de Neon ou de l’API maintient l’écran de connexion fermé à l’application ; la connexion internet est donc nécessaire, y compris après actualisation.
+
+Depuis **Espace RH en ligne**, l’utilisateur peut ensuite charger/sauvegarder la base ou se déconnecter. La déconnexion efface l’espace local et retourne à l’écran de connexion ; sauvegardez d’abord les modifications importantes. Une session restaurée est revalidée par l’API. Les droits sont également contrôlés côté serveur à chaque lecture et écriture ; un refus ou une session expirée lors d’une opération renvoie à la connexion. Une révocation n’efface pas rétroactivement les données déjà consultées ou exportées, et l’écran ne vérifie pas continuellement une session inactive.
+
+**Limite importante :** la page HTML et son code, ainsi que les données de démonstration fictives, sont des fichiers statiques publics. Le masquage de l’interface dans le navigateur n’est pas une protection serveur du fichier HTML. Les données RH partagées, elles, restent derrière la fonction et sa vérification d’autorisation. Ne jamais embarquer de données confidentielles dans le HTML. Sur poste partagé, le stockage navigateur n’est pas un coffre chiffré : déconnectez-vous et protégez la session du poste.
 
 ## Déploiement Netlify + Neon (configuration manuelle requise)
 
@@ -135,7 +143,7 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
    `DATABASE_URL` n’est pas une URL S3. Après modification des variables, redéployer. Pour chaque contexte ou domaine de prévisualisation, configurer explicitement son origine et sa base isolée ; ne pas ouvrir l’accès aux aperçus publics de production.
 8. La fonction exige un JWT Neon valide (signature JWKS, émetteur, audience, échéance), puis vérifie `rh_users` dans la base à chaque requête. Lecture et écriture sont journalisées. Un compte non listé ne peut pas accéder à la base même s’il peut se connecter à Neon Auth. Un jeton existant peut rester valable jusqu’à son expiration ; désactiver le compte dans `rh_users` bloque immédiatement l’API.
-9. Dans l’application : **Espace RH en ligne → se connecter → Charger depuis la base**. Si la base est vide, importer les fichiers réels puis choisir **Sauvegarder dans la base**. La sauvegarde est manuelle, limitée à 4 Mo de JSON par espace partagé, et protège contre les écrasements concurrents par un numéro de version. En cas de conflit, préserver/exporter les modifications locales avant de recharger : le chargement remplace l’espace local. Déconnexion : l’espace de travail et les paramètres de ce navigateur sont effacés, pas la base ; les modifications non enregistrées sont perdues.
+9. À l’ouverture, se connecter sur la page RH. Dans l’application : **Espace RH en ligne → Charger depuis la base**. Si la base est vide, importer les fichiers réels puis choisir **Sauvegarder dans la base**. La sauvegarde est manuelle, limitée à 4 Mo de JSON par espace partagé, et protège contre les écrasements concurrents par un numéro de version. En cas de conflit, préserver/exporter les modifications locales avant de recharger : le chargement remplace l’espace local. Déconnexion : l’espace de travail et les paramètres de ce navigateur sont effacés, pas la base ; les modifications non enregistrées sont perdues.
 10. Vérifier avec deux comptes fictifs : refus d’un utilisateur non autorisé, chargement/sauvegarde, conflit, déconnexion et restauration ; vérifier aussi chiffrement, rétention, sauvegardes, disponibilité, journal d’accès et conformité applicables aux données RH et médicales. Ne pas considérer un test simulé comme un test réel du service.
 
 ### Privilèges recommandés pour le rôle PostgreSQL de l’application
@@ -145,5 +153,5 @@ Créer le rôle via les outils Neon sans inscrire son mot de passe dans Git. Ave
 ### Tests
 
 - `npm test` : moteur métier ; `npm run test:cloud` : API avec base et authentification simulées.
-- `npm run test:browser` : navigateur et accessibilité ; `node tests/cloud-browser.mjs` : authentification, API et conflit simulés (serveur local lancé avec `npm start`).
+- `npm run test:browser` : navigateur et accessibilité ; `node tests/cloud-browser.mjs` : connexion, contrôle d’accès, révocation, API et conflit simulés (serveur local lancé avec `npm start`).
 - Les envois d’emails et l’authentification Neon réelle ne sont pas testés par ces simulations.

@@ -14,7 +14,14 @@ const al2023 = resolve(root, 'node_modules/@sparticuz/chromium/bin/al2023.tar.br
 if (!existsSync('/tmp/al2023/lib/libnspr4.so') && existsSync(al2023)) await inflate(al2023);
 const executablePath = process.env.CHROMIUM_PATH || await sparticuz.executablePath();
 const browser = await playwright.launch({ executablePath, headless: true, args: sparticuz.args.filter(arg => !['--single-process', '--disable-web-security', '--allow-running-insecure-content'].includes(arg)), env: { ...process.env, LD_LIBRARY_PATH: '/tmp/al2023/lib:/tmp:' + (process.env.LD_LIBRARY_PATH || '') } });
+async function mockAuthorized(ctx) {
+  const base = 'https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth';
+  const cors = { 'access-control-allow-origin': 'http://127.0.0.1:3000', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-expose-headers': 'set-auth-jwt', 'set-auth-jwt': 'header.payload.signature' };
+  await ctx.route(base + '/**', route => route.request().method() === 'OPTIONS' ? route.fulfill({ status: 204, headers: cors }) : route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ user: { id: 'browser-test', email: 'rh@example.invalid' }, session: { id: 'session-test', token: 'opaque', userId: 'browser-test', expiresAt: '2030-01-01T00:00:00.000Z' } }) }));
+  await ctx.route('**/.netlify/functions/workspace', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"version":0,"snapshot":null}' }));
+}
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan', acceptDownloads: true });
+await mockAuthorized(context);
 const page = await context.newPage(); page.setDefaultTimeout(10000);
 const errors = [], initialRequests = [];
 page.on('pageerror', error => errors.push(error.message));
@@ -39,9 +46,10 @@ async function confirmSend() { assert.equal(await page.locator('#campaign-send')
 try {
   await page.clock.setFixedTime(new Date('2026-11-12T12:00:00Z'));
   await page.goto(url, { waitUntil: 'networkidle' });
+  await page.locator('#application').waitFor({ state: 'visible' });
   assert.deepEqual(await kpi(), ['18', '8', '3', '5']);
   assert.equal(await page.locator('#period-start').inputValue(), '2026-09-01'); assert.equal(await page.locator('#period-end').inputValue(), '2026-11-30');
-  assert.deepEqual(initialRequests, []); step('Démonstration fictive : 18 collaborateurs, 8 éligibles, 3 échéances ; zéro requête externe');
+  assert.ok(initialRequests.every(url => url.startsWith('https://ep-orange-unit-b7693tds.neonauth.'))); step('Démonstration fictive : 18 collaborateurs, 8 éligibles, 3 échéances ; authentification simulée');
   await page.screenshot({ path: resolve(out, 'desktop-dashboard.png'), fullPage: true, timeout: 30000, animations: 'disabled' });
   await page.locator('#employee-search').fill('démo 9009'); assert.equal(await page.locator('#table-results tbody tr').count(), 1);
   await page.locator('#employee-search').fill('9009'); assert.equal(await page.locator('#table-results tbody tr').count(), 1);
@@ -58,7 +66,7 @@ try {
   assert.match(await page.locator('#table-results tbody tr').first().innerText(), /J-12/);
   await page.locator('[data-contract-end="9009"]').fill('2026-11-22'); await page.locator('[data-contract-end="9009"]').press('Tab');
   assert.match(await page.locator('#table-results tbody tr').first().innerText(), /J-10/);
-  await page.reload({ waitUntil: 'networkidle' }); await page.locator('[data-action="tab"][data-tab="contracts"]').click(); assert.equal(await page.locator('[data-contract-end="9009"]').inputValue(), '2026-11-22');
+  await page.reload({ waitUntil: 'networkidle' }); await page.locator('#application').waitFor({ state: 'visible' }); await page.locator('[data-action="tab"][data-tab="contracts"]').click(); assert.equal(await page.locator('[data-contract-end="9009"]').inputValue(), '2026-11-22');
   await editContract('9009', { email: 'test.joel@example.com', end: '2026-11-24' });
   await domClick('[data-action="contract-edit"][data-mat="9009"]'); await domClick('[data-action="reset-contract"]'); await domClick('[data-action="confirm-accept"]'); await page.waitForTimeout(150); assert.equal(await domValue('[data-contract-end="9009"]'), '2026-11-24');
   await editContract('9009', { email: 'test.joel@example.com' });
@@ -102,9 +110,9 @@ try {
   const exportedWB = XLSX.read(readFileSync(xlsxPath), { type: 'buffer' }); assert.ok(exportedWB.SheetNames.includes('Décisions RH')); assert.equal(XLSX.utils.sheet_to_json(exportedWB.Sheets['Décisions RH']).length, 18);
   await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; }); await page.locator('[data-action="toggle-export"]').click(); await page.locator('[data-action="print"]').click(); assert.equal(await page.evaluate(() => window.__printed), 1); assert.match(await page.locator('#print-report').innerText(), /Rapport de décision/);
   const profilePath2 = await download(async () => { await nav('imports'); await page.locator('[data-action="profile-export"]').click(); }, 'profiles-no-secret.json'); assert.ok(!readFileSync(profilePath2, 'utf8').includes('session-secret-do-not-persist'));
-  await page.reload({ waitUntil: 'networkidle' }); await nav('settings'); assert.equal(await domValue('#webhook-token'), ''); assert.ok(!(await page.evaluate(() => localStorage.getItem('voomnet-rh:v1'))).includes('session-secret-do-not-persist')); step('Webhook simulé, exports CSV/XLSX/PDF, jeton Bearer jamais persisté');
+  await page.reload({ waitUntil: 'networkidle' }); await page.locator('#application').waitFor({ state: 'visible' }); await nav('settings'); assert.equal(await domValue('#webhook-token'), ''); assert.ok(!(await page.evaluate(() => localStorage.getItem('voomnet-rh:v1'))).includes('session-secret-do-not-persist')); step('Webhook simulé, exports CSV/XLSX/PDF, jeton Bearer jamais persisté');
   assert.deepEqual(errors, []);
-  const auditContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan' }); const auditPage = await auditContext.newPage(); await auditPage.goto(url, { waitUntil: 'networkidle' });
+  const auditContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan' }); await mockAuthorized(auditContext); const auditPage = await auditContext.newPage(); await auditPage.goto(url, { waitUntil: 'networkidle' }); await auditPage.locator('#application').waitFor({ state: 'visible' });
   const violations = [];
   for (const destination of ['overview', 'contracts', 'imports', 'emails', 'settings']) {
     await auditPage.evaluate(destination => document.querySelector(`#main-nav [data-page="${destination}"], #tools-nav [data-page="${destination}"]`).click(), destination);
@@ -113,10 +121,10 @@ try {
   }
   writeFileSync(resolve(out, 'accessibility.json'), JSON.stringify(violations, null, 2));
   if (violations.length) console.log('ACCESSIBILITÉ', JSON.stringify(violations, null, 2));
-  const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan', isMobile: true, hasTouch: true }); const mobile = await mobileContext.newPage(); await mobile.goto(url, { waitUntil: 'networkidle' });
+  const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan', isMobile: true, hasTouch: true }); await mockAuthorized(mobileContext); const mobile = await mobileContext.newPage(); await mobile.goto(url, { waitUntil: 'networkidle' }); await mobile.locator('#application').waitFor({ state: 'visible' });
   assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)); await mobile.screenshot({ path: resolve(out, 'mobile-dashboard.png'), fullPage: true, timeout: 30000, animations: 'disabled' });
   await mobile.locator('[data-action="open-sidebar"]').click(); await mobile.locator('#main-nav [data-page="contracts"]').click(); await mobile.locator('[data-action="contract-edit"]').first().click(); const box = await mobile.locator('#modal').boundingBox(); assert.ok(box.width <= 390); await mobile.screenshot({ path: resolve(out, 'mobile-contract-modal.png'), timeout: 30000, animations: 'disabled' });
-  const offline = await auditContext.newPage(); await offline.goto(pathToFileURL(resolve(root, 'index.html')).href, { waitUntil: 'load' }); assert.equal(await offline.locator('.kpi-value').first().innerText(), '18'); step('Responsive mobile, modale adaptée et fichier HTML autonome opened via file://');
+  const offline = await auditContext.newPage(); await offline.goto(pathToFileURL(resolve(root, 'index.html')).href, { waitUntil: 'load' }); assert.equal(await offline.locator('#application').isHidden(), true); assert.equal(await offline.locator('#login-screen').isVisible(), true); step('Responsive mobile, modale adaptée et accès hors ligne refusé');
   assert.equal(violations.length, 0, 'Des violations WCAG AA ont été détectées ; voir .cache/screenshots/accessibility.json');
   console.log('Tous les tests navigateur sont passés.');
 } catch (error) { console.error('PAGE ERRORS', errors); console.error('DEBUG', await page.evaluate(() => ({ page: document.querySelector('h1')?.textContent, tab: document.querySelector('.table-tab.active')?.textContent, modal: document.querySelector('#modal')?.open, modalText: document.querySelector('#modal')?.innerText.slice(0, 300), body: document.querySelector('#main-content')?.innerText.slice(0, 500), inputs: [...document.querySelectorAll('#table-results input')].slice(0, 3).map(x => x.outerHTML), count: document.querySelectorAll('[data-contract-end="9009"]').length })).catch(() => null)); await page.screenshot({ path: resolve(out, 'failure.png'), fullPage: true }).catch(() => {}); throw error; } finally { await browser.close(); }
