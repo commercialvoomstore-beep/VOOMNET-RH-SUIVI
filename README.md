@@ -178,6 +178,25 @@ La session et les droits sont vérifiés au chargement et à chaque opération e
    Redéployer après modification. Utiliser des données et une base isolées pour les prévisualisations, pas la production ouverte à tous.
 8. Vérifier sur un environnement de test : connexion 1005, mauvais mot de passe, utilisateur non autorisé, deux comptes isolés, import, historique, restauration, sauvegarde des fiches, conflit, déconnexion et rechargement. Contrôler les JWT réellement émis (signature EdDSA, issuer et audience attendus), CORS et cookies ; les mocks ne prouvent pas la compatibilité du service réel. Vérifier sauvegardes, chiffrement, rétention et conformité RH avant toute production.
 
+### Créer un compte RH avec l’outil local
+
+L’outil s’exécute **sur l’ordinateur de l’administrateur**, dans un terminal interactif ; il ne fait pas partie du site public Netlify et ne crée pas de fonctionnalité d’administration ouverte sur le web. Il n’enregistre aucun mot de passe ou cookie dans un fichier et n’accepte pas de secret en argument ni par redirection. Les secrets et la session sont toutefois présents en mémoire pendant l’opération : utiliser un poste de confiance, protéger les traces système et ne jamais partager ces valeurs. L’outil utilise l’URL Neon Auth du projet intégrée dans `scripts/admin-auth.mjs` ; si le projet ou la branche change, adapter et vérifier l’URL dans le code avant de l’utiliser.
+
+**Prérequis :** Node.js 22 et un compte **Neon Auth** existant, avec email/mot de passe opérationnels et rôle `admin` (ce n’est pas automatiquement le compte de connexion à la console Neon). Dans la console Neon, sur la bonne branche : **Auth → Users → ⋯ → Make admin** sur un compte dont l’identité est vérifiée. Si vous n’avez pas de compte Auth avec mot de passe, créez-le par une procédure Neon adaptée avant de continuer ; cet outil ne contourne pas cette première étape ni une éventuelle authentification supplémentaire. Voir [l’administration Neon](https://neon.com/docs/auth/guides/plugins/admin).
+
+1. Dans le dossier du projet sur votre poste, lancer :
+
+   ```bash
+   npm run admin:create-user
+   ```
+
+2. Saisir l’identifiant numérique (par exemple `1005`), le nom affiché, l’email du compte **administrateur Neon Auth**, puis son mot de passe. Les mots de passe sont masqués à la saisie. Saisir et confirmer ensuite un **nouveau** mot de passe RH d’au moins 12 caractères, puis confirmer par `OUI`. Ne pas utiliser le mot de passe déjà divulgué.
+3. L’outil crée dans Neon Auth un compte de rôle `user` avec l’alias technique `1005@rh-identifiant.invalid`, puis tente de fermer la session administrateur. La création ne donne pas automatiquement accès à l’application.
+4. Vérifier le compte dans **Auth → Users**. Copier la commande SQL affichée par l’outil et l’exécuter dans le **SQL Editor de la bonne base** après application des migrations : elle autorise l’identifiant interne Neon dans `rh_users`. Cette étape est volontairement manuelle. Ne pas confondre l’identifiant interne avec `1005`.
+5. Remettre le mot de passe à l’utilisateur par un canal sécurisé, puis tester la connexion et les imports avec des données fictives. Vérifier que Netlify, Neon et la base sont configurés comme indiqué ci-dessus.
+
+**Important :** la compatibilité réelle de l’alias `.invalid`, des points d’accès et du cookie Neon n’a pas été vérifiée ici. Si Neon exige une vérification par email, l’alias ne peut pas recevoir le message ; prévoir une procédure administrative sécurisée, sans désactiver de protection sans évaluation. Le mot de passe ne peut pas être réinitialisé par email sur cet alias. En cas d’interruption ou de réponse serveur incertaine, le compte peut avoir été créé : vérifier dans Neon avant de réessayer. Si la déconnexion administrateur n’est pas confirmée, révoquer la session dans Neon. Ne jamais modifier directement les tables internes Neon Auth ni enregistrer un mot de passe dans SQL ou Git.
+
 ### Privilèges PostgreSQL recommandés
 
 Avec un propriétaire de base, attribuer au rôle applicatif uniquement `SELECT` sur `rh_users`, `SELECT, INSERT, UPDATE` sur `rh_personal_workspace`, `SELECT, INSERT` sur les trois tables d’import, `INSERT` sur `rh_audit` et `USAGE` sur leurs séquences d’identité. Ne pas donner les droits de modification de `rh_users`, du schéma ou des tables Neon Auth. Créer le rôle et gérer son mot de passe hors Git ; tester les privilèges sur une base isolée.
@@ -215,6 +234,7 @@ Le serveur écoute sur le port `3000` par défaut (`PORT` permet de le modifier)
 | `netlify/functions/workspace.mjs` | API RH, autorisations, sauvegarde versionnée et audit. |
 | `netlify.toml` | Commande de build, dossier publié et fonctions Netlify. |
 | `scripts/build.mjs` | Génération de `index.html` depuis les sources et les données fictives. |
+| `scripts/create-rh-user.mjs`, `scripts/admin-auth.mjs` | Outil local interactif de création RH via Neon Auth. |
 | `tests/` | Tests métier, API et navigateurs. |
 
 ### Tests
@@ -224,6 +244,7 @@ Lancer le serveur local (`npm start`) dans un premier terminal, puis dans un sec
 ```bash
 npm test                      # règles métier
 npm run test:cloud            # API et vérification JWT, base simulée
+npm run test:admin            # outil de création RH et sécurité, Neon simulé
 npm run test:browser          # parcours navigateur et accessibilité
 node tests/cloud-browser.mjs  # connexion et API simulées
 ```
