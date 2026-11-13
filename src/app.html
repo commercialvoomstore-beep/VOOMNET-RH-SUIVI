@@ -4,13 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f172a">
-  <meta name="description" content="Voomnet RH — Aide à la décision pour les primes trimestrielles, les contrats et les alertes e-mail. Calculs locaux et sauvegarde RH partagée à la demande.">
+  <meta name="description" content="Voomnet RH — Aide à la décision pour les primes trimestrielles, les contrats et les alertes e-mail. Calculs locaux et imports RH privés enregistrés en ligne.">
   <title>Voomnet RH - Gestion des Primes Trimestrielles &amp; Contrats</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%232563eb'/%3E%3Cpath d='M9 12l11 18 11-18h-7l-4 7-4-7z' fill='white'/%3E%3C/svg%3E">
   <!-- INLINE:CSS -->
 </head>
 <body>
-  <main id="login-screen" class="login-screen" aria-labelledby="login-title">
+  <div id="splash" class="splash" role="status" aria-label="Chargement de Voomnet RH"><div class="splash-content"><span class="splash-logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 8.5 16 26 27 8.5h-7L16 16l-4-7.5H5Z" fill="currentColor"/></svg></span><strong>voomnet<span>.</span></strong><small>RESSOURCES HUMAINES</small><div class="splash-bar"><span></span></div><p>Votre espace RH se prépare…</p></div></div>
+  <main id="login-screen" inert class="login-screen" aria-labelledby="login-title">
     <div class="login-layout">
       <section class="login-intro" aria-label="Voomnet Ressources Humaines">
         <div class="login-brand"><span class="login-logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 8.5 16 26 27 8.5h-7L16 16l-4-7.5H5Z" fill="currentColor"/></svg></span><div><strong>voomnet<span>.</span></strong><small>RESSOURCES HUMAINES</small></div></div>
@@ -20,9 +21,9 @@
       <section class="login-panel" aria-labelledby="login-title"><div class="login-card">
         <div class="login-card-kicker"><span></span> CONNEXION RÉSERVÉE AU SERVICE RH</div>
         <h2 id="login-title">Bienvenue sur<br>votre espace RH<span>.</span></h2>
-        <p class="login-description">Connectez-vous avec votre compte professionnel pour accéder à l’application.</p>
+        <p class="login-description">Connectez-vous avec votre identifiant RH et votre mot de passe pour accéder à l’application.</p>
         <form id="login-form" class="login-form">
-          <label for="login-email">Adresse e-mail professionnelle</label><input id="login-email" name="email" type="email" autocomplete="username" placeholder="vous@entreprise.ci" required>
+          <label for="login-id">Identifiant RH</label><input id="login-id" name="identifier" type="text" autocomplete="username" inputmode="numeric" pattern="[0-9]{1,16}" maxlength="16" placeholder="Ex. 1005" required>
           <label for="login-password">Mot de passe</label><div class="login-password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Votre mot de passe" required><button id="login-toggle-password" type="button" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></div>
           <div id="login-message" class="login-message" role="status" aria-live="polite"></div>
           <button class="login-submit" type="submit">Se connecter <span aria-hidden="true">→</span></button>
@@ -46,7 +47,7 @@
     <p class="nav-caption mt-8">CONFIGURATION</p>
     <nav id="tools-nav" class="space-y-1"></nav>
     <div class="mt-auto pt-8">
-      <div class="sidebar-note"><i data-lucide="shield-check"></i><div><strong>Confidentialité des données</strong><p>Calculs dans votre navigateur ; partage en ligne uniquement à votre demande.</p></div></div>
+      <div class="sidebar-note"><i data-lucide="shield-check"></i><div><strong>Confidentialité des données</strong><p>Calculs dans votre navigateur ; imports enregistrés dans votre espace personnel.</p></div></div>
       <div class="sidebar-user"><span class="avatar avatar-dark">RH</span><div><strong>Service RH</strong><small>Voomnet Technology / Formation</small></div><button class="icon-button text-slate-400 ml-auto" data-action="nav" data-page="settings" aria-label="Ouvrir les paramètres"><i data-lucide="settings-2"></i></button></div>
     </div>
   </aside>
