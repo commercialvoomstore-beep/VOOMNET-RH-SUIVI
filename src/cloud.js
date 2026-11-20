@@ -1,22 +1,23 @@
-import { createAuthClient } from '@neon/neon-js/auth';
-import { BetterAuthVanillaAdapter } from '@neon/neon-js/auth/vanilla';
+import { createClient } from '@supabase/supabase-js';
 
-// Le service Neon Auth gère les mots de passe. L'alias technique n'est pas une boîte mail.
-const auth = createAuthClient('https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth', { adapter: BetterAuthVanillaAdapter({ fetchOptions: { credentials: 'include' } }) });
+// URL et clé publishable Supabase : publiques, sans privilège de service.
+const auth = createClient('https://hibhvszfgldgxzcxhmou.supabase.co', 'sb_publishable__l9N851qkB3FG9kHItbPiQ_tpfTB7QY', { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }).auth;
 const workspace = window.VoomnetWorkspace;
 const loginScreen = document.querySelector('#login-screen'), application = document.querySelector('#application');
 const form = document.querySelector('#login-form'), loginMessage = document.querySelector('#login-message');
 const loginSubmit = form.querySelector('[type="submit"]'), passwordInput = document.querySelector('#login-password');
+const signup = document.querySelector('#signup-form'), signupMessage = document.querySelector('#signup-message'), authSwitch = document.querySelector('#auth-switch');
 const ownerKey = 'voomnet-rh:last-user', kinds = ['employees', 'absences', 'pointage'];
 let currentUser = null, version = null, pending = false, loginPending = false;
 const splash = document.querySelector('#splash'); application.inert = true;
 setTimeout(() => { splash.classList.add('is-leaving'); loginScreen.inert = false; application.inert = false; setTimeout(() => splash.remove(), 400); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 50 : 1100);
 const button = document.createElement('button'); button.className = 'btn btn-sm'; button.textContent = 'Espace RH en ligne';
 document.querySelector('.topbar > div:last-child').prepend(button);
+const logoutButton = document.createElement('button'); logoutButton.className = 'btn btn-sm'; logoutButton.textContent = 'Déconnexion'; logoutButton.onclick = () => signOut(); document.querySelector('.topbar > div:last-child').append(logoutButton);
 const dialog = document.createElement('dialog'); dialog.setAttribute('aria-labelledby', 'cloud-title');
 dialog.style.cssText = 'width:min(95vw,600px);max-height:90vh;overflow:auto;border:0;border-radius:16px;padding:24px;color:#0f172a;box-shadow:0 20px 60px #0005'; application.append(dialog);
 function setLoginBusy(busy, message = '') {
-  loginPending = busy; loginSubmit.disabled = busy;
+  loginPending = busy; loginSubmit.disabled = busy; signup.querySelector('[type=submit]').disabled = busy; authSwitch.disabled = busy;
   loginSubmit.innerHTML = busy ? 'Vérification en cours…' : 'Se connecter <span aria-hidden="true">→</span>';
   loginMessage.textContent = message;
 }
@@ -32,7 +33,7 @@ function sameOwner(userId) {
 }
 async function getSession() {
   const { data, error } = await auth.getSession();
-  return error || !data?.user?.id || !data?.session?.token ? null : { user: data.user, token: data.session.token };
+  return error || !data?.session?.user?.id || !data?.session?.access_token ? null : { user: data.session.user, token: data.session.access_token };
 }
 async function api(token, method, body, query = {}) {
   if (body && new TextEncoder().encode(JSON.stringify(body)).length > 4 * 1024 * 1024) throw new Error('Données traitées trop volumineuses : 4 Mo de JSON maximum par envoi. Réduisez le fichier puis réessayez.');
@@ -80,6 +81,12 @@ window.VoomnetOnline = {
     const result = await request('POST', { expectedVersion: version, kind }, { action: 'remove' }); version = result.version;
   }
 };
+function showSignup(active) {
+  form.hidden = active; signup.hidden = !active; authSwitch.textContent = active ? 'Déjà inscrit ? Se connecter' : 'Créer un compte';
+  document.querySelector('#login-title').innerHTML = active ? 'Créer votre<br>compte RH<span>.</span>' : 'Bienvenue sur<br>votre espace RH<span>.</span>';
+  loginMessage.textContent = ''; signupMessage.textContent = ''; passwordInput.value = ''; signup.elements.password.value = ''; signup.elements.confirm.value = '';
+}
+authSwitch.addEventListener('click', () => showSignup(signup.hidden));
 form.addEventListener('submit', async event => {
   event.preventDefault(); if (loginPending) return;
   const identifier = form.elements.identifier.value.trim(), password = passwordInput.value;
@@ -87,12 +94,31 @@ form.addEventListener('submit', async event => {
   if (!/^\d{1,16}$/.test(identifier)) return lock('Saisissez un identifiant RH numérique valide.');
   setLoginBusy(true);
   try {
-    let result;
-    try { result = await auth.signIn.email({ email: identifier + '@rh-identifiant.invalid', password }); }
-    catch { throw new Error('Connexion impossible. Vérifiez vos identifiants et votre connexion internet.'); }
-    if (result.error) throw new Error('Connexion impossible. Vérifiez vos identifiants et votre connexion internet.');
+    const response = await fetch('/.netlify/functions/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }), cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(20000) });
+    let result; try { result = await response.json(); } catch { throw new Error('Service de connexion indisponible.'); }
+    if (!response.ok) throw new Error(result.error || 'Connexion impossible.');
+    const { error } = await auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
+    if (error) throw new Error('Connexion impossible. Réessayez.');
     await authorize(await getSession());
   } catch (error) { lock(error instanceof TypeError ? 'Service de connexion indisponible. Réessayez.' : (error.message || 'Connexion impossible. Contactez l’administrateur.')); }
+  finally { setLoginBusy(false, loginMessage.textContent); }
+});
+signup.addEventListener('submit', async event => {
+  event.preventDefault(); if (loginPending) return;
+  const identifier = signup.elements.identifier.value.trim(), email = signup.elements.email.value.trim(), password = signup.elements.password.value, confirmation = signup.elements.confirm.value;
+  signup.elements.password.value = ''; signup.elements.confirm.value = '';
+  if (!/^\d{1,16}$/.test(identifier) || !email || password.length < 12 || password.length > 128 || password !== confirmation) { signupMessage.textContent = 'Vérifiez l’identifiant, l’adresse et les mots de passe (12 caractères minimum).'; return; }
+  setLoginBusy(true); signupMessage.textContent = '';
+  try {
+    let ready;
+    try { ready = await fetch('/.netlify/functions/signup-ready', { cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(15000) }); }
+    catch { throw new Error('Inscription indisponible : la base ou le service RH doit être configuré.'); }
+    if (!ready.ok) throw new Error('Inscription indisponible : la base ou le service RH doit être configuré.');
+    const { data, error } = await auth.signUp({ email, password, options: { data: { rh_identifier: identifier }, emailRedirectTo: location.origin + location.pathname } });
+    if (error) throw new Error('Inscription impossible. Vérifiez les informations ou contactez l’administrateur.');
+    if (data.session) { await authorize(await getSession()); signupMessage.textContent = ''; }
+    else { signupMessage.textContent = 'Si l’inscription est acceptée, consultez votre messagerie pour confirmer votre adresse avant de vous connecter.'; }
+  } catch (error) { signupMessage.textContent = error instanceof TypeError ? 'Service d’inscription indisponible.' : (error.message || 'Inscription impossible.'); }
   finally { setLoginBusy(false, loginMessage.textContent); }
 });
 document.querySelector('#login-toggle-password').addEventListener('click', event => {
@@ -103,7 +129,7 @@ function render(message = '') {
   dialog.innerHTML = `<h2 id="cloud-title" style="font-size:20px;font-weight:700;margin-bottom:12px">Mon espace RH</h2><p style="font-size:13px;line-height:1.5;margin-bottom:14px">Vos imports sont enregistrés automatiquement et restent privés. Les fiches et paramètres doivent être sauvegardés séparément. L’historique conserve les versions précédentes.</p><p id="cloud-message" role="status" style="font-size:13px;line-height:1.5;color:#9a3412;white-space:pre-wrap;margin-bottom:12px"></p><div id="cloud-content"></div><div id="cloud-history"></div><button class="btn" id="cloud-close" style="margin-top:16px">Fermer</button>`;
   dialog.querySelector('#cloud-message').textContent = message;
   const area = dialog.querySelector('#cloud-content'), info = document.createElement('p'); info.style.cssText = 'font-size:13px;margin-bottom:10px;overflow-wrap:anywhere';
-  const identifier = (currentUser?.email || '').replace(/@rh-identifiant\.invalid$/, '');
+  const identifier = currentUser?.user_metadata?.rh_identifier || 'Compte RH';
   info.textContent = `Identifiant : ${identifier} · Version : ${version ?? 'indisponible'}.`; area.append(info);
   const actions = document.createElement('div'); actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
   for (const [label, fn, primary] of [['Actualiser mon espace', load, false], ['Sauvegarder fiches et paramètres', save, true], ['Historique des imports', history, false], ['Se déconnecter', signOut, false]]) {
@@ -165,7 +191,7 @@ async function signOut() {
   if (!confirm('Les imports sont conservés en base. Les fiches et paramètres non sauvegardés seront perdus. Se déconnecter ?')) return;
   workspace.clear(); try { localStorage.removeItem(ownerKey); } catch {}
   lock(); setLoginBusy(true, 'Déconnexion en cours…');
-  try { const result = await auth.signOut(); if (result.error) throw new Error(); lock('Vous êtes déconnecté.'); }
+  try { const result = await auth.signOut({ scope: 'local' }); if (result.error) throw new Error(); lock('Vous êtes déconnecté.'); }
   catch { lock('Déconnexion distante non confirmée. Fermez le navigateur et contactez l’administrateur.'); }
 }
 button.onclick = () => { render(); if (!dialog.open) dialog.showModal(); };
