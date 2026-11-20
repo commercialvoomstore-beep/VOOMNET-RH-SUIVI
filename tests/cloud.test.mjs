@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
-import { makeHandler, verifyWithKeySet } from '../netlify/functions/workspace.mjs';
-import { generateKeyPair, exportJWK, createLocalJWKSet, SignJWT } from 'jose';
+import { makeHandler } from '../netlify/functions/workspace.mjs';
+import { verifySupabaseToken } from '../netlify/lib/supabase.mjs';
 
 const origin = 'https://rh.example.com';
 const source = (filename, mat = '1005') => ({ filename, rows: [{ mat, name: 'Fictif' }], stats: { accepted: 1, encoding: 'UTF-8' } });
@@ -84,16 +84,13 @@ test('API : méthode, origine, format, type et limite vérifiés', async () => {
   } finally { await db.close(); }
 });
 
-test('JWT : signature, émetteur, audience et échéance vérifiés', async () => {
-  const { privateKey, publicKey } = await generateKeyPair('EdDSA');
-  const key = await exportJWK(publicKey); key.kid = 'test-key'; key.alg = 'EdDSA';
-  const keys = createLocalJWKSet({ keys: [key] }), authOrigin = 'https://auth.example.com', cfg = { auth: { origin: authOrigin } };
-  const sign = async ({ iss = authOrigin, aud = authOrigin, exp = '5m' } = {}) => new SignJWT({}).setProtectedHeader({ alg: 'EdDSA', kid: 'test-key' }).setIssuer(iss).setAudience(aud).setSubject('user-a').setIssuedAt().setExpirationTime(exp).sign(privateKey);
-  assert.equal(await verifyWithKeySet(await sign(), cfg, keys), 'user-a');
-  await assert.rejects(verifyWithKeySet(await sign({ aud: 'https://other.example' }), cfg, keys));
-  await assert.rejects(verifyWithKeySet(await sign({ iss: 'https://other.example' }), cfg, keys));
-  await assert.rejects(verifyWithKeySet(await sign({ exp: '1 second ago' }), cfg, keys));
-  const { privateKey: other } = await generateKeyPair('EdDSA');
-  const forged = await new SignJWT({}).setProtectedHeader({ alg: 'EdDSA', kid: 'test-key' }).setIssuer(authOrigin).setAudience(authOrigin).setSubject('user-a').setExpirationTime('5m').sign(other);
-  await assert.rejects(verifyWithKeySet(forged, cfg, keys));
+test('Authentification Supabase : validation distante, échec et indisponibilité', async () => {
+  const id = '4bdaeb19-4411-4451-8bc7-97d76f0c1871';
+  let calls = 0;
+  const fetcher = async (url, options) => { calls++; assert.match(url, /\/auth\/v1\/user$/); assert.equal(options.headers.Authorization, 'Bearer test-token'); return new Response(JSON.stringify({ id }), { status: 200 }); };
+  assert.equal(await verifySupabaseToken('test-token', fetcher), id); assert.equal(calls, 1);
+  await assert.rejects(verifySupabaseToken('bad', async () => new Response('{}', { status: 401 })), e => e.status === 401);
+  await assert.rejects(verifySupabaseToken('bad', async () => new Response('{}', { status: 503 })), e => e.status === 503);
+  await assert.rejects(verifySupabaseToken('bad', async () => { throw Error('réseau'); }), e => e.status === 503);
+  await assert.rejects(verifySupabaseToken('bad', async () => new Response('{"id":"bad"}', { status: 200 })));
 });

@@ -19,7 +19,7 @@
         <p class="login-intro-footer">VOOMNET TECHNOLOGY / FORMATION <span>·</span> ESPACE RH</p>
       </section>
       <section class="login-panel" aria-labelledby="login-title"><div class="login-card">
-        <div class="login-card-kicker"><span></span> CONNEXION RÉSERVÉE AU SERVICE RH</div>
+        <div class="login-card-kicker"><span></span> VOTRE ESPACE RH PERSONNEL</div>
         <h2 id="login-title">Bienvenue sur<br>votre espace RH<span>.</span></h2>
         <p class="login-description">Connectez-vous avec votre identifiant RH et votre mot de passe pour accéder à l’application.</p>
         <form id="login-form" class="login-form">
@@ -28,8 +28,17 @@
           <div id="login-message" class="login-message" role="status" aria-live="polite"></div>
           <button class="login-submit" type="submit">Se connecter <span aria-hidden="true">→</span></button>
         </form>
-        <div class="login-help"><span aria-hidden="true">✳</span><p><strong>Besoin d’un accès ?</strong><br>Contactez votre administrateur RH pour créer ou activer votre compte.</p></div>
-        <p class="login-security">Accès réservé aux personnes autorisées · Connexion internet requise</p>
+        <form id="signup-form" class="login-form" hidden>
+          <label for="signup-id">Identifiant RH numérique</label><input id="signup-id" name="identifier" type="text" autocomplete="username" inputmode="numeric" pattern="[0-9]{1,16}" maxlength="16" placeholder="Ex. 1005" required>
+          <label for="signup-email">Adresse e-mail réelle</label><input id="signup-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+          <label for="signup-password">Mot de passe (12 caractères minimum)</label><input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <label for="signup-confirm">Confirmer le mot de passe</label><input id="signup-confirm" name="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <button class="login-submit" type="submit">Créer mon compte <span aria-hidden="true">→</span></button>
+        </form>
+        <div id="signup-message" class="login-message" role="status" aria-live="polite"></div>
+        <p class="login-switch"><button id="auth-switch" type="button">Créer un compte</button></p>
+        <div class="login-help"><span aria-hidden="true">✳</span><p><strong>Inscription personnelle</strong><br>Toute personne peut créer un compte personnel. Utilisez une adresse e-mail valide pour le confirmer.</p></div>
+        <p class="login-security">Connexion internet requise · Comptes personnels</p>
       </div></section>
     </div>
   </main>

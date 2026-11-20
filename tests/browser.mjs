@@ -15,9 +15,9 @@ if (!existsSync('/tmp/al2023/lib/libnspr4.so') && existsSync(al2023)) await infl
 const executablePath = process.env.CHROMIUM_PATH || await sparticuz.executablePath();
 const browser = await playwright.launch({ executablePath, headless: true, args: sparticuz.args.filter(arg => !['--single-process', '--disable-web-security', '--allow-running-insecure-content'].includes(arg)), env: { ...process.env, LD_LIBRARY_PATH: '/tmp/al2023/lib:/tmp:' + (process.env.LD_LIBRARY_PATH || '') } });
 async function mockAuthorized(ctx) {
-  const base = 'https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth';
-  const cors = { 'access-control-allow-origin': 'http://127.0.0.1:3000', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-expose-headers': 'set-auth-jwt', 'set-auth-jwt': 'header.payload.signature' };
-  await ctx.route(base + '/**', route => route.request().method() === 'OPTIONS' ? route.fulfill({ status: 204, headers: cors }) : route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ user: { id: 'browser-test', email: 'rh@example.invalid' }, session: { id: 'session-test', token: 'opaque', userId: 'browser-test', expiresAt: '2030-01-01T00:00:00.000Z' } }) }));
+  const jwt = [Buffer.from('{"alg":"none"}').toString('base64url'), Buffer.from(JSON.stringify({ exp: 1893456000, sub: '4bdaeb19-4411-4451-8bc7-97d76f0c1871' })).toString('base64url'), 'c2lnbmF0dXJl'].join('.');
+  const session = { access_token: jwt, refresh_token: 'refresh-token', token_type: 'bearer', expires_at: 1893456000, expires_in: 1000000, user: { id: '4bdaeb19-4411-4451-8bc7-97d76f0c1871', email: 'rh@example.test', user_metadata: { rh_identifier: '1005' } } };
+  await ctx.addInitScript(session => { if (location.protocol.startsWith('http') && !localStorage.getItem('sb-hibhvszfgldgxzcxhmou-auth-token')) localStorage.setItem('sb-hibhvszfgldgxzcxhmou-auth-token', JSON.stringify(session)); }, session);
   let version = 0, snapshot = { version: 1, contracts: {}, settings: {} }, active = { employees: null, absences: null, pointage: null }, sequence = 0; const imports = {};
   await ctx.route('**/.netlify/functions/workspace**', async route => {
     const req = route.request(), u = new URL(req.url()), action = u.searchParams.get('action'); let response;
@@ -64,7 +64,7 @@ try {
   await page.locator('#application').waitFor({ state: 'visible' });
   assert.deepEqual(await kpi(), ['18', '8', '3', '5']);
   assert.equal(await page.locator('#period-start').inputValue(), '2026-09-01'); assert.equal(await page.locator('#period-end').inputValue(), '2026-11-30');
-  assert.ok(initialRequests.every(url => url.startsWith('https://ep-orange-unit-b7693tds.neonauth.'))); step('Démonstration fictive : 18 collaborateurs, 8 éligibles, 3 échéances ; authentification simulée');
+  assert.ok(initialRequests.every(url => url.startsWith('https://hibhvszfgldgxzcxhmou.supabase.co/'))); step('Démonstration fictive : 18 collaborateurs, 8 éligibles, 3 échéances ; authentification simulée');
   await page.screenshot({ path: resolve(out, 'desktop-dashboard.png'), fullPage: true, timeout: 30000, animations: 'disabled' });
   await page.locator('#employee-search').fill('démo 9009'); assert.equal(await page.locator('#table-results tbody tr').count(), 1);
   await page.locator('#employee-search').fill('9009'); assert.equal(await page.locator('#table-results tbody tr').count(), 1);

@@ -2,7 +2,7 @@
 
 Application d’aide à la décision pour le suivi des **primes trimestrielles**, des **contrats** et des **alertes RH**. L’interface est livrée en un fichier [`index.html`](index.html), avec Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et une démonstration fictive intégrés : aucun CDN n’est requis.
 
-**L’application ne fonctionne pas de manière autonome hors ligne** : l’accès à l’interface nécessite Neon Auth, la fonction Netlify, PostgreSQL et une connexion internet. La connexion réelle, la base et les comptes RH doivent être configurés et vérifiés avant utilisation.
+**L’application ne fonctionne pas de manière autonome hors ligne** : l’accès à l’interface nécessite Supabase Auth, les fonctions Netlify, PostgreSQL et une connexion internet. La connexion réelle, la base et les comptes RH doivent être configurés et vérifiés avant utilisation.
 
 ### Sommaire
 
@@ -11,20 +11,20 @@ Application d’aide à la décision pour le suivi des **primes trimestrielles**
 - [Règles métier](#règles-métier)
 - [Emails et exports](#emails-et-alertes)
 - [Connexion RH et sécurité](#connexion-au-service-rh)
-- [Déploiement Netlify et Neon](#déploiement-netlify--neon-configuration-manuelle-requise)
+- [Déploiement Netlify et Supabase](#déploiement-netlify--supabase-configuration-manuelle-requise)
 - [Dépannage](#dépannage)
 - [Développement et tests](#développement)
 
 ## Démarrage
 
 - **Usage en ligne** : ouvrir le site Netlify configuré, puis se connecter avec un compte RH autorisé. Le fichier `index.html` seul, sans API et connexion, affiche la page de connexion mais ne débloque pas l’application.
-- **Aperçu local** : `npm install` puis `npm start` (port `3000`, configurable via `PORT`). Ce serveur statique permet de visualiser la page de connexion, mais ne fournit pas la fonction Netlify ; la connexion réelle ne fonctionnera pas sans environnement Netlify et configuration Neon.
+- **Aperçu local** : `npm install` puis `npm start` (port `3000`, configurable via `PORT`). Ce serveur statique permet de visualiser la page de connexion, mais ne fournit pas la fonction Netlify ; la connexion réelle ne fonctionnera pas sans environnement Netlify et configuration Supabase.
 - **Régénérer le fichier autonome** : `npm run build`.
 - **Tests** : `npm test` (moteur de règles) et `npm run test:browser` (nécessite `npm start` dans un autre terminal).
 
 Les sources sont dans `src/`, les fichiers **fictifs** de démonstration dans `data/`, et le fichier HTML généré à la racine. Pour commencer en tant que RH :
 
-1. Connectez-vous avec votre identifiant numérique et votre mot de passe ; votre compte doit avoir été créé et autorisé par l’administrateur.
+1. Créez un compte avec un identifiant numérique, une adresse e-mail réelle et un mot de passe, confirmez votre adresse si Supabase le demande, puis connectez-vous avec cet identifiant et ce mot de passe.
 2. Dans **Données & imports**, importez les absences, le pointage et, si disponible, le référentiel des collaborateurs. Chaque import réussi est enregistré automatiquement dans votre espace personnel. Le bouton de démonstration charge uniquement des données fictives.
 3. Vérifiez les dates, les anomalies, le périmètre actif, les décisions de prime et les contrats ; configurez les alertes si nécessaire.
 4. Depuis **Espace RH en ligne**, sauvegardez séparément les fiches et paramètres. Consultez **Historique des imports** pour rétablir une version précédente. L’actualisation charge la version enregistrée et remplace les modifications locales non sauvegardées.
@@ -135,88 +135,50 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
 ## Confidentialité et sécurité
 
-- Les calculs sont effectués dans le navigateur. Chaque import validé est transmis automatiquement à l’API Netlify et stocké dans une table propre à son type, avec historique. Les fiches et paramètres sont enregistrés en ligne uniquement sur demande ; ils sont aussi stockés localement.
-- Chaque requête est authentifiée et filtrée par l’identifiant Neon du compte : un compte ne voit pas les imports ou fiches des autres. Cette isolation dépend de la sécurité de l’API, de PostgreSQL et de la configuration ; un administrateur de base y a accès.
-- Les imports précédents restent en base même lorsqu’on retire la version active. L’historique est paginé par 100. Prévoir sauvegarde, durée de rétention et procédure de suppression conformes aux règles RH.
-- Le `localStorage` n’est pas chiffré. Sur un poste partagé, déconnectez-vous et protégez la session du poste ; un export reste accessible là où il a été enregistré. Les données déjà téléchargées ou consultées ne sont pas effacées par une révocation.
-- Les fichiers statiques et la démonstration fictive sont publics. Ne jamais intégrer de données réelles ni de secrets dans le HTML ou Git.
+- Chaque import validé est transmis à l’API Netlify et enregistré dans une table d’historique distincte par type. Le contenu des lignes normalisées est conservé en JSONB dans ces tables : ce ne sont pas des colonnes PostgreSQL séparées pour chaque champ source. Les fiches et paramètres nécessitent une sauvegarde manuelle.
+- L’API vérifie le jeton auprès de Supabase Auth, puis filtre les lectures et écritures par l’UUID du propriétaire. Les tables RH sont inaccessibles aux rôles navigateur Supabase `anon` et `authenticated` grâce aux droits et à RLS ; le rôle serveur a accès aux données de tous les comptes et doit rester secret.
+- **Inscription ouverte et accès automatique**, conformément au choix demandé : toute personne pouvant accéder au site peut créer un compte et revendiquer un identifiant RH encore libre. La vérification d’email ne prouve pas l’appartenance à l’équipe RH. Ne pas utiliser ce mode pour des données RH sensibles sans validation du risque et contrôles complémentaires (invitations/approbation ou restriction réseau).
+- Le navigateur conserve la session Supabase dans `localStorage`, non chiffré et accessible au JavaScript du site. Protéger contre XSS, utiliser un poste de confiance, se déconnecter et protéger les exports. Une révocation ou déconnexion ne détruit pas les données déjà téléchargées ; l’état de session n’est pas vérifié en continu.
+- La fonction de connexion limite les tentatives par identifiant et par IP sur 15 minutes, avec risque de blocage temporaire d’un utilisateur en cas d’abus. Configurer également les limites et protections d’inscription dans Supabase et Netlify : l’API Auth publique Supabase est accessible indépendamment de la fonction. Surveiller et nettoyer les compteurs anciens.
+- Les anciens secrets divulgués doivent être révoqués. Le dépôt et les anciens déploiements peuvent conserver des données RH réelles dans leur historique : restreindre l’accès et organiser leur traitement séparément. Ne jamais intégrer données réelles ou secrets dans le HTML/Git.
 
 ## Connexion au service RH
 
-La page de connexion demande un identifiant numérique de 1 à 16 chiffres et un mot de passe. Pour utiliser Neon Auth email/mot de passe sans exposer une adresse à l’utilisateur, le client transforme l’identifiant en alias technique : par exemple `1005` devient `1005@rh-identifiant.invalid`. Il ne s’agit **pas d’une boîte mail**. Le compte correspondant doit être créé explicitement dans Neon Auth et son identifiant interne autorisé dans `rh_users`. Aucun compte 1005 ni mot de passe n’est créé par le code.
+L’inscription demande un identifiant RH numérique unique de 1 à 16 chiffres, une **véritable adresse email** et un mot de passe d’au moins 12 caractères. Supabase Auth gère les mots de passe et l’éventuelle confirmation d’email. L’identifiant est enregistré lors de la création et reste stable même si les métadonnées du compte changent. Pour se connecter, saisir l’identifiant et le mot de passe ; l’adresse est retrouvée uniquement côté serveur. Un bouton **Déconnexion** est visible dans la barre supérieure.
 
-L’acceptation de l’alias `.invalid`, les réglages de vérification d’email et la connexion doivent être vérifiés dans le projet Neon réel. La récupération de mot de passe par email ne peut pas fonctionner avec cet alias non distribuable : prévoir une procédure administrative sécurisée de réinitialisation et de remise du mot de passe, ainsi que limitation des tentatives, surveillance et politique de mots de passe adaptées. Ne pas désactiver des protections sans évaluation. Neon Auth reste responsable du contrôle du mot de passe ; l’API ajoute le contrôle d’accès RH.
+Si la confirmation d’email est activée dans Supabase, suivre le lien reçu avant de se connecter. L’application ne dispose pas encore d’une interface de réinitialisation du mot de passe ; prévoir une procédure sécurisée dans Supabase. La création d’un compte ne migre pas les comptes ou données Neon. Aucun compte 1005 ni mot de passe n’est préinstallé.
 
-La session et les droits sont vérifiés au chargement et à chaque opération en ligne, pas en continu pendant l’inactivité. Une panne de Neon ou de l’API empêche l’accès. La déconnexion efface les données locales, mais ne supprime pas les données en base. Les cookies tiers peuvent être bloqués par certains navigateurs ; vérifier les domaines de confiance, CORS et les cookies en conditions réelles.
+## Déploiement Netlify + Supabase (configuration manuelle requise)
 
-## Déploiement Netlify + Neon (configuration manuelle requise)
+**Les changements sont préparés mais la base et le service réels n’ont pas été configurés ni testés ici.** Utiliser un projet Supabase **dédié et isolé**, pas un projet partagé : la migration ajoute un déclencheur à chaque nouvelle inscription Auth qui exige un identifiant RH numérique. Sauvegarder et vérifier la restauration avant toute modification, et tester avec des données fictives. Aucun ancien espace Neon n’est supprimé ou copié automatiquement.
 
-**Préparation non déployée ni testée sur Neon réel.** Ne pas importer de données réelles avant validation de bout en bout et des mesures de sécurité.
-
-1. Révoquer et remplacer les secrets et mots de passe divulgués. Ne jamais communiquer secrets, mots de passe ou `DATABASE_URL` dans le chat ou Git. Les clés S3 ne sont pas utilisées ici.
-2. Le dépôt et ses anciens déploiements ont déjà exposé des données RH réelles. Les fichiers courants sont fictifs, mais les anciens commits, clones et déploiements peuvent rester accessibles. Restreindre les accès et organiser une purge avec les responsables concernés.
-3. **Sauvegarder et vérifier une restauration avant migration**. Sur une copie ou branche de test Neon, appliquer [`database/001_initial.sql`](database/001_initial.sql), puis [`database/002_individual_imports.sql`](database/002_individual_imports.sql). La migration est additive : elle conserve `rh_workspace` et crée `rh_personal_workspace`, `rh_import_employees`, `rh_import_absences`, `rh_import_pointage`. L’ancien espace partagé n’est **pas** transféré automatiquement : décider avec les responsables quel compte peut recevoir quelles données et migrer ou réimporter explicitement après contrôle. Ne pas supprimer l’ancien espace avant validation et sauvegarde.
-4. Activer Neon Auth email/mot de passe. Par un moyen administratif sécurisé, créer chaque compte avec l’alias technique approprié, par exemple `1005@rh-identifiant.invalid`, et un mot de passe distinct non divulgué. Neon documente la [création administrative](https://neon.com/docs/auth/guides/plugins/admin) et la réinitialisation de mot de passe ; tester au préalable les conditions d’acceptation et de vérification de l’alias. Restreindre l’inscription publique si possible ; ne jamais autoriser automatiquement toute inscription. Ajouter l’origine HTTPS exacte du site aux origines de confiance Neon. L’URL Auth est intégrée dans `src/cloud.js` : si le projet change, la modifier et reconstruire.
-5. Récupérer l’**identifiant interne** `user.id` de Neon Auth (différent de `1005`) depuis la console ou le message affiché après connexion d’un compte non autorisé. Dans l’éditeur SQL de la base, autoriser explicitement chaque personne :
-
-   ```sql
-   INSERT INTO rh_users (user_id, active) VALUES ('ID_INTERNE_NEON_AUTH', true)
-   ON CONFLICT (user_id) DO UPDATE SET active = true;
-   ```
-
-   Remplacer la valeur par l’identifiant réel vérifié, pas l’alias ni le mot de passe. Pour révoquer l’accès : `UPDATE rh_users SET active = false WHERE user_id = 'ID_INTERNE_NEON_AUTH';`. Les comptes autorisés ont les mêmes fonctionnalités, mais des espaces individuels distincts.
-6. Déployer la branche intégrée au site Netlify. `netlify.toml` construit `index.html`, publie seulement `public/` et déploie la fonction `workspace` avec Node 22. Vérifier que les réglages du site ne remplacent pas cette configuration.
-7. Dans **Netlify → Site configuration → Environment variables**, définir pour la fonction et le contexte concernés :
+1. Dans Supabase, choisir le projet `hibhvszfgldgxzcxhmou`, vérifier qu’Auth email/mot de passe et les inscriptions sont activés, et imposer une longueur minimale de 12 caractères côté Supabase (les appels directs contournent la validation du formulaire). Activer la confirmation d’email et configurer un service d’envoi adapté. Dans **Authentication → URL Configuration**, définir l’URL de votre site et autoriser son URL de retour exacte. Vérifier envoi, lien et restrictions d’abus. N’utiliser que le fournisseur email : le déclencheur ne prend pas en charge les autres modes d’inscription sans adaptation.
+2. Dans le **SQL Editor** du projet dédié, exécuter dans cet ordre [`database/001_initial.sql`](database/001_initial.sql), [`database/002_individual_imports.sql`](database/002_individual_imports.sql), puis [`database/004_supabase.sql`](database/004_supabase.sql). Le troisième active RLS, retire l’accès navigateur aux tables RH et ajoute le déclencheur d’inscription. Le fichier `003` et les scripts locaux Neon sont historiques : **ne pas les exécuter pour Supabase**. Vérifier l’absence d’autres politiques ou privilèges existants avant mise en production.
+3. Préparer un rôle PostgreSQL dédié `rh_backend`, sans privilège propriétaire ni `BYPASSRLS`, avec un mot de passe géré hors Git et hors chat ; appliquer ensuite [`database/005_supabase_role_serveur.sql`](database/005_supabase_role_serveur.sql). Tester sur la base isolée les permissions et la connexion TLS/pooler Supabase de ce rôle. L’API possède un accès à l’ensemble des espaces avec ce rôle ; protéger sa chaîne de connexion et vérifier les filtres côté serveur. Si votre offre/configuration ne permet pas ce rôle ou le pooler, résoudre ce point avant la production : ne pas exposer le compte administrateur au navigateur.
+4. Dans Netlify, déployer la branche intégrée et configurer, pour le contexte approprié :
 
    | Variable | Valeur |
    |---|---|
-   | `DATABASE_URL` | URL PostgreSQL Neon avec TLS ; secrète, côté serveur uniquement. Utiliser un rôle applicatif à privilèges minimaux. |
-   | `NEON_AUTH_BASE_URL` | `https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth` |
-   | `NEON_AUTH_JWKS_URL` | `https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json` |
-   | `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site, sans chemin ni slash final. |
+   | `DATABASE_URL` | Chaîne PostgreSQL Supabase TLS du rôle serveur ; **secrète**, côté fonctions Netlify uniquement. Ne jamais l’envoyer dans le chat ou Git. |
+   | `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site Netlify, sans slash final ni chemin. |
 
-   Redéployer après modification. Utiliser des données et une base isolées pour les prévisualisations, pas la production ouverte à tous.
-8. Vérifier sur un environnement de test : connexion 1005, mauvais mot de passe, utilisateur non autorisé, deux comptes isolés, import, historique, restauration, sauvegarde des fiches, conflit, déconnexion et rechargement. Contrôler les JWT réellement émis (signature EdDSA, issuer et audience attendus), CORS et cookies ; les mocks ne prouvent pas la compatibilité du service réel. Vérifier sauvegardes, chiffrement, rétention et conformité RH avant toute production.
+   La clé `sb_publishable` et l’URL du projet sont publiques et intégrées dans le client et les fonctions : elles ne remplacent pas RLS ou une autorisation serveur. Ne jamais intégrer de clé `service_role` ou `secret` dans le client. `netlify.toml` déploie les fonctions `login` et `workspace` et publie uniquement `public/`. Redéployer après changement des variables. Pour un autre projet Supabase, adapter l’URL et la clé dans `src/cloud.js` et `netlify/lib/supabase.mjs`, puis reconstruire.
+5. Tester sur une base isolée : inscription avec email réel et confirmation, identifiant déjà pris, connexion, refus de mot de passe, limitations, déconnexion et nouvelle connexion ; puis vérifier avec deux comptes que chacun ne lit ni ne restaure les imports de l’autre. Tester également la protection RLS via les API Supabase, les versions d’import, les conflits, les exports et les e-mails. Vérifier que Supabase Auth, Netlify `context.ip`, la configuration PostgreSQL et le SMTP fonctionnent réellement. Les tests simulés ne suffisent pas à prouver la sécurité en production.
 
-### Créer un compte RH avec l’outil local
+### Données et comptes précédents
 
-L’outil s’exécute **sur l’ordinateur de l’administrateur**, dans un terminal interactif ; il ne fait pas partie du site public Netlify et ne crée pas de fonctionnalité d’administration ouverte sur le web. Il n’enregistre aucun mot de passe ou cookie dans un fichier et n’accepte pas de secret en argument ni par redirection. Les secrets et la session sont toutefois présents en mémoire pendant l’opération : utiliser un poste de confiance, protéger les traces système et ne jamais partager ces valeurs. L’outil utilise l’URL Neon Auth du projet intégrée dans `scripts/admin-auth.mjs` ; si le projet ou la branche change, adapter et vérifier l’URL dans le code avant de l’utiliser.
-
-**Prérequis :** Node.js 22 et un compte **Neon Auth** existant, avec email/mot de passe opérationnels et rôle `admin` (ce n’est pas automatiquement le compte de connexion à la console Neon). Dans la console Neon, sur la bonne branche : **Auth → Users → ⋯ → Make admin** sur un compte dont l’identité est vérifiée. Si vous n’avez pas de compte Auth avec mot de passe, créez-le par une procédure Neon adaptée avant de continuer ; cet outil ne contourne pas cette première étape ni une éventuelle authentification supplémentaire. Voir [l’administration Neon](https://neon.com/docs/auth/guides/plugins/admin).
-
-1. Dans le dossier du projet sur votre poste, lancer :
-
-   ```bash
-   npm run admin:create-user
-   ```
-
-2. Saisir l’identifiant numérique (par exemple `1005`), le nom affiché, l’email du compte **administrateur Neon Auth**, puis son mot de passe. Les mots de passe sont masqués à la saisie. Saisir et confirmer ensuite un **nouveau** mot de passe RH d’au moins 12 caractères, puis confirmer par `OUI`. Ne pas utiliser le mot de passe déjà divulgué.
-3. L’outil crée dans Neon Auth un compte de rôle `user` avec l’alias technique `1005@rh-identifiant.invalid`, puis tente de fermer la session administrateur. La création ne donne pas automatiquement accès à l’application.
-4. Vérifier le compte dans **Auth → Users**. Copier la commande SQL affichée par l’outil et l’exécuter dans le **SQL Editor de la bonne base** après application des migrations : elle autorise l’identifiant interne Neon dans `rh_users`. Cette étape est volontairement manuelle. Ne pas confondre l’identifiant interne avec `1005`.
-5. Remettre le mot de passe à l’utilisateur par un canal sécurisé, puis tester la connexion et les imports avec des données fictives. Vérifier que Netlify, Neon et la base sont configurés comme indiqué ci-dessus.
-
-**Important :** la compatibilité réelle de l’alias `.invalid`, des points d’accès et du cookie Neon n’a pas été vérifiée ici. Si Neon exige une vérification par email, l’alias ne peut pas recevoir le message ; prévoir une procédure administrative sécurisée, sans désactiver de protection sans évaluation. Le mot de passe ne peut pas être réinitialisé par email sur cet alias. En cas d’interruption ou de réponse serveur incertaine, le compte peut avoir été créé : vérifier dans Neon avant de réessayer. Si la déconnexion administrateur n’est pas confirmée, révoquer la session dans Neon. Ne jamais modifier directement les tables internes Neon Auth ni enregistrer un mot de passe dans SQL ou Git.
-
-### Autoriser un utilisateur RH depuis SQL Editor
-
-Après création du compte et de son mot de passe dans Neon Auth, le script [`database/003_autoriser_utilisateur_rh.sql`](database/003_autoriser_utilisateur_rh.sql) autorise un compte existant dans `rh_users`. Il est préparé pour l'identifiant `1005`. Dans le script, remplacer `ID_INTERNE_NEON_AUTH` par le véritable `id` du compte, vérifié dans **Auth → Users**. Pour un autre compte, modifier aussi `identifiant_rh` (1 à 16 chiffres) ; le script vérifie que l’alias technique et l’ID interne désignent le même compte.
-
-Copier le fichier entier dans le **SQL Editor**, sélectionner la bonne branche/base et l’exécuter avec un rôle ayant les droits de lecture sur `neon_auth.user` et d’écriture sur `public.rh_users`. Les migrations `001` et `002` doivent déjà être appliquées. Le script est relançable : il ne réactive pas automatiquement un compte désactivé. L’espace personnel est initialisé par l’API à la première connexion autorisée. Il ne crée ni compte d’authentification ni mot de passe et n’est pas une migration automatique de l’ancien espace partagé. Ne jamais inscrire de mot de passe dans SQL.
-
-### Privilèges PostgreSQL recommandés
-
-Avec un propriétaire de base, attribuer au rôle applicatif uniquement `SELECT` sur `rh_users`, `SELECT, INSERT, UPDATE` sur `rh_personal_workspace`, `SELECT, INSERT` sur les trois tables d’import, `INSERT` sur `rh_audit` et `USAGE` sur leurs séquences d’identité. Ne pas donner les droits de modification de `rh_users`, du schéma ou des tables Neon Auth. Créer le rôle et gérer son mot de passe hors Git ; tester les privilèges sur une base isolée.
+Les anciens scripts `003_autoriser_utilisateur_rh.sql`, `scripts/create-rh-user.mjs` et `scripts/admin-auth.mjs` ne servent qu’à l’ancienne intégration Neon ; ils ne créent pas de compte Supabase. Les données Neon et les éventuels comptes existants ne sont ni supprimés ni importés par cette migration. Une reprise exige sauvegarde, vérification de l’identité des propriétaires et migration planifiée. Ne pas recopier de mot de passe dans SQL.
 
 ## Dépannage
 
 | Symptôme | Points à vérifier |
 |---|---|
-| Connexion impossible | Identifiants, service Neon Auth, connexion internet, domaine de confiance, CORS et blocage des cookies tiers. |
-| « Compte non autorisé » | Vérifier l’`id` retourné par Neon Auth et l’entrée active dans `rh_users`. Vérifier aussi l’origine autorisée si la réponse est 403. |
-| Service RH indisponible ou non configuré | Variables Netlify, redéploiement, URL PostgreSQL/TLS, droits du rôle et exécution du schéma SQL. Le serveur local `npm start` ne fournit pas l’API. |
-| Conflit lors de la sauvegarde | Une autre version a été enregistrée. Préserver/exporter les modifications locales, puis recharger avant de sauvegarder ; le rechargement remplace l’espace local. |
-| Sauvegarde trop volumineuse | La limite est de 4 Mio de JSON par requête, distincte de la limite d’import de 10 Mo par fichier. Réduire le fichier traité puis réessayer. |
-| Déconnexion distante non confirmée | Les données locales sont effacées, mais la fin de session distante n’est pas garantie. Fermer le navigateur et contacter l’administrateur. |
+| Inscription impossible | Projet Supabase dédié, signup email activé, scripts exécutés dans l’ordre, identifiant RH unique, mot de passe et configuration email. Les erreurs restent génériques. |
+| Connexion impossible | Identifiant et mot de passe, confirmation de l’email, état du compte, limites de tentatives et disponibilité Supabase. |
+| Service indisponible ou non configuré | `DATABASE_URL`, `RH_ALLOWED_ORIGIN`, déploiement Netlify, connexion TLS et droits du rôle `rh_backend`. `npm start` est un serveur statique sans fonctions. |
+| Conflit lors de la sauvegarde | Préserver/exporter les modifications locales, puis actualiser ; l’actualisation remplace l’espace local. |
+| Import trop volumineux | La limite est de 4 Mio de JSON par requête, distincte de la limite de 10 Mo par fichier. |
+| Déconnexion distante non confirmée | Fermer le navigateur et vérifier la session dans Supabase ; les données locales ont été effacées. |
 
 ## Développement
 
@@ -234,14 +196,16 @@ Le serveur écoute sur le port `3000` par défaut (`PORT` permet de le modifier)
 |---|---|
 | `src/app.html`, `src/styles.css`, `src/app.js` | Interface, styles, imports et stockage local. |
 | `src/core.js` | Règles métier, analyse des fichiers, scores et exports. |
-| `src/cloud.js` | Connexion Neon Auth et actions de l’espace personnel et historique des imports. |
+| `src/cloud.js` | Inscription et connexion Supabase, actions de l’espace personnel et historique des imports. |
 | `database/001_initial.sql` | Schéma PostgreSQL initial. |
 | `database/002_individual_imports.sql` | Migration additive pour les espaces individuels et historiques. |
-| `database/003_autoriser_utilisateur_rh.sql` | Autorisation SQL d’un compte Neon Auth existant. |
+| `database/004_supabase.sql` | Sécurité Supabase, identifiants RH et inscription. |
+| `database/005_supabase_role_serveur.sql` | Droits limités du rôle PostgreSQL serveur. |
+| `netlify/functions/login.mjs` | Connexion par identifiant et limitation des tentatives. |
 | `netlify/functions/workspace.mjs` | API RH, autorisations, sauvegarde versionnée et audit. |
 | `netlify.toml` | Commande de build, dossier publié et fonctions Netlify. |
 | `scripts/build.mjs` | Génération de `index.html` depuis les sources et les données fictives. |
-| `scripts/create-rh-user.mjs`, `scripts/admin-auth.mjs` | Outil local interactif de création RH via Neon Auth. |
+| `scripts/create-rh-user.mjs`, `scripts/admin-auth.mjs` | Outils historiques pour Neon Auth uniquement ; non utilisés avec Supabase. |
 | `tests/` | Tests métier, API et navigateurs. |
 
 ### Tests
@@ -251,12 +215,11 @@ Lancer le serveur local (`npm start`) dans un premier terminal, puis dans un sec
 ```bash
 npm test                      # règles métier
 npm run test:cloud            # API et vérification JWT, base simulée
-npm run test:admin            # outil de création RH et sécurité, Neon simulé
-node --test tests/sql-user.test.mjs  # script SQL, base et Neon Auth simulés
+npm run test:supabase         # migrations, contrôle RLS et connexion simulée
 npm run test:browser          # parcours navigateur et accessibilité
 node tests/cloud-browser.mjs  # connexion et API simulées
 ```
 
-Les tests navigateur utilisent Playwright et le Chromium embarqué `@sparticuz/chromium`. `tests/browser.mjs` accepte `TEST_URL` et `CHROMIUM_PATH` ; ses réponses d’authentification simulées utilisent cependant l’origine `http://127.0.0.1:3000`. `tests/cloud-browser.mjs` attend également le serveur local sur cette adresse. Les tests simulent Neon Auth, la base et les envois d’emails : ils **ne prouvent pas** qu’une configuration ou un envoi réel fonctionne.
+Les tests navigateur utilisent Playwright et le Chromium embarqué `@sparticuz/chromium`. `tests/browser.mjs` accepte `TEST_URL` et `CHROMIUM_PATH` ; ses réponses d’authentification simulées utilisent cependant l’origine `http://127.0.0.1:3000`. `tests/cloud-browser.mjs` attend également le serveur local sur cette adresse. Les tests simulent Supabase Auth, la base et les envois d’emails : ils **ne prouvent pas** qu’une configuration ou un envoi réel fonctionne.
 
 SheetJS est embarqué via la distribution npm `@e965/xlsx` 0.20.3, avec PapaParse 5.5.3, Lucide 0.468.0 et Inter.

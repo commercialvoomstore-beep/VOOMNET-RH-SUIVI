@@ -9,28 +9,31 @@ if (!existsSync('/tmp/al2023/lib/libnspr4.so')) await inflate(archive);
 const browser = await chromium.launch({ executablePath: await sparticuz.executablePath(), headless: true, args: sparticuz.args.filter(a => !['--single-process','--disable-web-security','--allow-running-insecure-content'].includes(a)), env: { ...process.env, LD_LIBRARY_PATH: '/tmp/al2023/lib:/tmp:' + (process.env.LD_LIBRARY_PATH || '') } });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'fr-FR' });
 const page = await context.newPage();
-let version = 0, loggedIn = false, authorized = true, apiAvailable = true, sequence = 0;
+let version = 0, authorized = true, apiAvailable = true, sequence = 0;
 let snapshot = { version: 1, contracts: {}, settings: {} }, active = { employees: null, absences: null, pointage: null };
 const saved = {}, history = { employees: [], absences: [], pointage: [] };
-const authBase = 'https://ep-orange-unit-b7693tds.neonauth.c-13.us-east-1.aws.neon.tech/neondb/auth';
-const user = { id: 'rh-user-test', email: '1005@rh-identifiant.invalid', name: 'RH Démo', emailVerified: true };
-const session = { id: 'session1', userId: user.id, token: 'opaque-session', expiresAt: '2030-01-01T00:00:00.000Z' };
-const cors = { 'access-control-allow-origin': 'http://127.0.0.1:3000', 'access-control-allow-credentials': 'true', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-expose-headers': 'set-auth-jwt', 'set-auth-jwt': 'header.payload.signature' };
+const authBase = 'https://hibhvszfgldgxzcxhmou.supabase.co/auth/v1';
+const user = { id: '4bdaeb19-4411-4451-8bc7-97d76f0c1871', email: 'rh@example.test', user_metadata: { rh_identifier: '1005' }, aud: 'authenticated', role: 'authenticated' };
+const jwt = [Buffer.from('{"alg":"none"}').toString('base64url'), Buffer.from(JSON.stringify({ exp: 1893456000, sub: user.id })).toString('base64url'), 'c2lnbmF0dXJl'].join('.');
+const cors = { 'access-control-allow-origin': 'http://127.0.0.1:3000', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS' };
+let signups = 0, ready = false;
+await context.route('**/.netlify/functions/signup-ready', route => route.fulfill({ status: ready ? 200 : 503, contentType: 'application/json', body: ready ? '{"ready":true}' : '{"error":"non configuré"}' }));
 await context.route(authBase + '/**', async route => {
   const path = route.request().url().slice(authBase.length);
   if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
-  if (path.startsWith('/sign-in/email')) {
-    const body = route.request().postDataJSON(); assert.equal(body.email, '1005@rh-identifiant.invalid');
-    if (body.password !== 'test-password') return route.fulfill({ status: 401, headers: cors, contentType: 'application/json', body: '{"message":"Invalid credentials"}' });
-    loggedIn = true; return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ user, session }) });
-  }
-  if (path.startsWith('/get-session')) return route.fulfill({ status: 200, headers: loggedIn ? cors : { ...cors, 'set-auth-jwt': '' }, contentType: 'application/json', body: JSON.stringify(loggedIn ? { user, session } : null) });
-  if (path.startsWith('/sign-out')) { loggedIn = false; return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: '{"success":true}' }); }
-  return route.fulfill({ status: 404, headers: cors, body: '{}' });
+  if (path.startsWith('/signup')) { const body = route.request().postDataJSON(); assert.equal(body.data.rh_identifier, '1005'); assert.equal(body.email, 'rh@example.test'); signups++; return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ ...user, identities: [{ id: user.id }] }) }); }
+  if (path.startsWith('/user')) return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(user) });
+  if (path.startsWith('/logout')) return route.fulfill({ status: 204, headers: cors });
+  return route.fulfill({ status: 404, headers: cors, contentType: 'application/json', body: '{}' });
+});
+await context.route('**/.netlify/functions/login', async route => {
+  const body = route.request().postDataJSON(); assert.equal(body.identifier, '1005');
+  if (body.password !== 'test-password') return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Identifiant ou mot de passe incorrect."}' });
+  return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: jwt, refresh_token: 'refresh' }) });
 });
 await context.route('**/.netlify/functions/workspace**', async route => {
   const req = route.request(), url = new URL(req.url()), action = url.searchParams.get('action');
-  assert.equal(req.headers().authorization, 'Bearer header.payload.signature');
+  assert.equal(req.headers().authorization, 'Bearer ' + jwt);
   if (!apiAvailable) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Service non configuré."}' });
   if (!authorized) return route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"Ce compte ne dispose pas des droits RH."}' });
   let output;
@@ -57,7 +60,8 @@ try {
   assert.equal(await page.locator('#application').isHidden(), true); assert.equal(await page.locator('#login-screen').isVisible(), true);
   mkdirSync('.cache/screenshots', { recursive: true }); await page.screenshot({ path: '.cache/screenshots/login.png', fullPage: true, timeout: 30000, animations: 'disabled' });
   assert.deepEqual((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map(v => v.id), []);
-  await login('incorrect'); await page.getByText('Connexion impossible.', { exact: false }).waitFor(); assert.equal(await page.locator('#application').isHidden(), true); assert.equal(await page.locator('#login-password').inputValue(), '');
+  await page.locator('#auth-switch').click(); assert.deepEqual((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map(v => v.id), []); await page.locator('#signup-id').fill('1005'); await page.locator('#signup-email').fill('rh@example.test'); await page.locator('#signup-password').fill('long-password-123'); await page.locator('#signup-confirm').fill('long-password-123'); await page.locator('#signup-form [type=submit]').click(); await page.getByText('Inscription indisponible', { exact: false }).waitFor(); assert.equal(signups, 0); ready = true; await page.locator('#signup-password').fill('long-password-123'); await page.locator('#signup-confirm').fill('long-password-123'); await page.locator('#signup-form [type=submit]').click(); await page.getByText('Si l’inscription est acceptée', { exact: false }).waitFor(); assert.equal(signups, 1); assert.equal(await page.locator('#signup-password').inputValue(), ''); await page.locator('#auth-switch').click();
+  await login('incorrect'); await page.getByText('Identifiant ou mot de passe incorrect.', { exact: false }).waitFor(); assert.equal(await page.locator('#application').isHidden(), true); assert.equal(await page.locator('#login-password').inputValue(), '');
   authorized = false; await login('test-password'); await page.getByText('Compte non autorisé.', { exact: false }).waitFor(); assert.equal(await page.locator('#application').isHidden(), true);
   authorized = true; apiAvailable = false; await login('test-password'); await page.getByText('Service non configuré.', { exact: false }).waitFor(); assert.equal(await page.locator('#application').isHidden(), true);
   apiAvailable = true; await login('test-password'); await page.locator('#application').waitFor({ state: 'visible' });
@@ -76,8 +80,8 @@ try {
   await page.locator('#main-nav [data-page="imports"]').click(); assert.match(await page.locator('[data-drop-kind="employees"]').innerText(), /premier.csv/);
   authorized = false; await page.getByRole('button', { name: 'Espace RH en ligne' }).click(); await page.getByText('Actualiser mon espace').click(); await page.locator('#login-screen').waitFor({ state: 'visible' });
   authorized = true; await login('test-password'); await page.locator('#application').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Espace RH en ligne' }).click(); await page.getByText('Se déconnecter').click(); await page.getByText('Vous êtes déconnecté.', { exact: false }).waitFor(); assert.equal(await page.locator('#application').isHidden(), true);
+  await page.getByRole('button', { name: 'Déconnexion' }).click(); await page.getByText('Vous êtes déconnecté.', { exact: false }).waitFor(); assert.equal(await page.locator('#application').isHidden(), true);
   const mobile = await context.newPage(); await mobile.setViewportSize({ width: 390, height: 844 }); await mobile.goto('http://127.0.0.1:3000'); await mobile.locator('#splash').waitFor({ state: 'detached' });
   assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth)); await mobile.screenshot({ path: '.cache/screenshots/login-mobile.png', fullPage: true, timeout: 30000, animations: 'disabled' });
-  console.log('Connexion ID, splash, imports auto, historique, restauration, conflit, révocation et déconnexion simulés : OK ; axe : 0 violation.');
+  console.log('Inscription Supabase, connexion ID, splash, imports auto, historique, restauration, conflit, révocation et déconnexion simulés : OK ; axe : 0 violation.');
 } finally { await browser.close(); }

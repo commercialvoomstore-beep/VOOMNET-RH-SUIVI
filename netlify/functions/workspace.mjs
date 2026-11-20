@@ -1,30 +1,8 @@
-import pg from 'pg';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { config, getPool, verifySupabaseToken } from '../lib/supabase.mjs';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const TABLES = Object.freeze({ employees: 'rh_import_employees', absences: 'rh_import_absences', pointage: 'rh_import_pointage' });
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
-let pool, keySet, cachedJwks;
-function config() {
-  const { DATABASE_URL, NEON_AUTH_BASE_URL, NEON_AUTH_JWKS_URL, RH_ALLOWED_ORIGIN } = process.env;
-  if (!DATABASE_URL || !NEON_AUTH_BASE_URL || !NEON_AUTH_JWKS_URL || !RH_ALLOWED_ORIGIN) throw new Error('Configuration serveur incomplète');
-  const auth = new URL(NEON_AUTH_BASE_URL), jwks = new URL(NEON_AUTH_JWKS_URL), origin = new URL(RH_ALLOWED_ORIGIN);
-  if (auth.protocol !== 'https:' || jwks.href !== auth.href.replace(/\/$/, '') + '/.well-known/jwks.json' || origin.origin !== RH_ALLOWED_ORIGIN) throw new Error('Configuration serveur invalide');
-  return { DATABASE_URL, auth, jwks, origin: origin.origin };
-}
-export async function verifyWithKeySet(token, cfg, keys) {
-  const { payload } = await jwtVerify(token, keys, { issuer: cfg.auth.origin, audience: cfg.auth.origin, algorithms: ['EdDSA'] });
-  if (typeof payload.sub !== 'string' || !payload.sub || payload.sub.length > 256 || !payload.exp) throw new Error('Identité invalide');
-  return payload.sub;
-}
-async function verify(token, cfg) {
-  if (cachedJwks !== cfg.jwks.href) { keySet = createRemoteJWKSet(cfg.jwks); cachedJwks = cfg.jwks.href; }
-  return verifyWithKeySet(token, cfg, keySet);
-}
-function getPool(cfg) {
-  if (!pool) pool = new pg.Pool({ connectionString: cfg.DATABASE_URL, max: 2, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000, ssl: { rejectUnauthorized: true } });
-  return pool;
-}
 const isObject = x => x && typeof x === 'object' && !Array.isArray(x);
 function validSource(source) {
   return isObject(source) && typeof source.filename === 'string' && source.filename.length <= 255 && Array.isArray(source.rows) && source.rows.length <= 50000 && source.rows.every(isObject) && isObject(source.stats);
@@ -40,7 +18,7 @@ export function makeHandler(deps = {}) {
     const match = /^Bearer ([A-Za-z0-9._-]+)$/.exec(request.headers.get('authorization') || '');
     if (!match || match[1].length > 10000) return json({ error: 'Authentification requise.' }, 401);
     let user;
-    try { user = await (deps.verify || verify)(match[1], cfg); } catch { return json({ error: 'Session invalide ou expirée.' }, 401); }
+    try { user = await (deps.verify || verifySupabaseToken)(match[1], cfg); } catch (error) { return error.status === 503 ? json({ error: 'Service de connexion indisponible.' }, 503) : json({ error: 'Session invalide ou expirée.' }, 401); }
     let data;
     if (request.method !== 'GET') {
       if (!/^application\/json\b/i.test(request.headers.get('content-type') || '')) return json({ error: 'JSON requis.' }, 415);
