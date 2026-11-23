@@ -150,20 +150,94 @@ Si la confirmation d’email est activée dans Supabase, suivre le lien reçu av
 
 ## Déploiement Netlify + Supabase (configuration manuelle requise)
 
-**Les changements sont préparés mais la base et le service réels n’ont pas été configurés ni testés ici.** Utiliser un projet Supabase **dédié et isolé**, pas un projet partagé : la migration ajoute un déclencheur à chaque nouvelle inscription Auth qui exige un identifiant RH numérique. Sauvegarder et vérifier la restauration avant toute modification, et tester avec des données fictives. Aucun ancien espace Neon n’est supprimé ou copié automatiquement.
+**La configuration réelle et le fonctionnement de bout en bout ne sont pas confirmés par les tests locaux.** Utiliser un projet Supabase dédié et isolé : le script `004` ajoute un déclencheur qui exige un identifiant RH à chaque inscription Auth. Sauvegarder et vérifier la restauration avant toute modification. Tester avec des données fictives avant utilisation réelle.
 
-1. Dans Supabase, choisir le projet `hibhvszfgldgxzcxhmou`, vérifier qu’Auth email/mot de passe et les inscriptions sont activés, et imposer une longueur minimale de 12 caractères côté Supabase (les appels directs contournent la validation du formulaire). Activer la confirmation d’email et configurer un service d’envoi adapté. Dans **Authentication → URL Configuration**, définir l’URL de votre site et autoriser son URL de retour exacte. Vérifier envoi, lien et restrictions d’abus. N’utiliser que le fournisseur email : le déclencheur ne prend pas en charge les autres modes d’inscription sans adaptation.
-2. Dans le **SQL Editor** du projet dédié, exécuter dans cet ordre [`database/001_initial.sql`](database/001_initial.sql), [`database/002_individual_imports.sql`](database/002_individual_imports.sql), puis [`database/004_supabase.sql`](database/004_supabase.sql). Le troisième active RLS, retire l’accès navigateur aux tables RH et ajoute le déclencheur d’inscription. Le fichier `003` et les scripts locaux Neon sont historiques : **ne pas les exécuter pour Supabase**. Vérifier l’absence d’autres politiques ou privilèges existants avant mise en production.
-3. Préparer un rôle PostgreSQL dédié `rh_backend`, sans privilège propriétaire ni `BYPASSRLS`, avec un mot de passe géré hors Git et hors chat ; appliquer ensuite [`database/005_supabase_role_serveur.sql`](database/005_supabase_role_serveur.sql). Tester sur la base isolée les permissions et la connexion TLS/pooler Supabase de ce rôle. L’API possède un accès à l’ensemble des espaces avec ce rôle ; protéger sa chaîne de connexion et vérifier les filtres côté serveur. Si votre offre/configuration ne permet pas ce rôle ou le pooler, résoudre ce point avant la production : ne pas exposer le compte administrateur au navigateur.
-4. Dans Netlify, déployer la branche intégrée et configurer, pour le contexte approprié :
+### 1. Configurer Supabase Auth
 
-   | Variable | Valeur |
-   |---|---|
-   | `DATABASE_URL` | Chaîne PostgreSQL Supabase TLS du rôle serveur ; **secrète**, côté fonctions Netlify uniquement. Ne jamais l’envoyer dans le chat ou Git. |
-   | `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site Netlify, sans slash final ni chemin. |
+1. Ouvrir [Supabase](https://supabase.com/dashboard) et sélectionner le projet `hibhvszfgldgxzcxhmou`.
+2. Dans **Authentication**, activer l’inscription par email et mot de passe. Imposer une longueur minimale de 12 caractères côté Supabase : un appel direct à l’API peut contourner la validation du formulaire.
+3. Activer la confirmation d’email et configurer l’envoi des messages. Dans **Authentication → URL Configuration**, définir l’URL HTTPS du site Netlify et autoriser son URL de retour. Vérifier la réception et les protections contre les inscriptions abusives.
+4. Cette intégration est prévue pour le fournisseur **email** ; les autres modes d’inscription exigent une adaptation du déclencheur.
 
-   La clé `sb_publishable` et l’URL du projet sont publiques et intégrées dans le client et les fonctions : elles ne remplacent pas RLS ou une autorisation serveur. Ne jamais intégrer de clé `service_role` ou `secret` dans le client. `netlify.toml` déploie les fonctions `login` et `workspace` et publie uniquement `public/`. Redéployer après changement des variables. Pour un autre projet Supabase, adapter l’URL et la clé dans `src/cloud.js` et `netlify/lib/supabase.mjs`, puis reconstruire.
-5. Tester sur une base isolée : inscription avec email réel et confirmation, identifiant déjà pris, connexion, refus de mot de passe, limitations, déconnexion et nouvelle connexion ; puis vérifier avec deux comptes que chacun ne lit ni ne restaure les imports de l’autre. Tester également la protection RLS via les API Supabase, les versions d’import, les conflits, les exports et les e-mails. Vérifier que Supabase Auth, Netlify `context.ip`, la configuration PostgreSQL et le SMTP fonctionnent réellement. Les tests simulés ne suffisent pas à prouver la sécurité en production.
+La clé `sb_publishable` et l’URL du projet sont publiques et déjà intégrées dans le client et les fonctions ; elles ne donnent pas à elles seules accès aux données protégées et ne remplacent pas RLS. Ne jamais mettre de clé `service_role`, de clé secrète ou de mot de passe dans le code client, Git ou une conversation.
+
+### 2. Créer les tables et protéger les données
+
+Dans le **SQL Editor** du projet dédié, copier et exécuter les fichiers suivants **dans l’ordre** :
+
+1. [`database/001_initial.sql`](database/001_initial.sql)
+2. [`database/002_individual_imports.sql`](database/002_individual_imports.sql)
+3. [`database/004_supabase.sql`](database/004_supabase.sql)
+
+Le dernier script configure notamment RLS, retire les accès navigateur aux tables RH et installe le déclencheur d’inscription. Vérifier qu’aucune autre politique ou privilège existant ne donne accès aux données RH. **Ne pas exécuter `003_autoriser_utilisateur_rh.sql` pour Supabase** : il concerne Neon Auth.
+
+### 3. Créer le rôle serveur `rh_backend`
+
+Ce rôle PostgreSQL sert **uniquement aux fonctions Netlify**. Il n’est pas le compte RH `1005`. Un administrateur peut vérifier s’il existe dans le SQL Editor :
+
+```sql
+SELECT rolname, rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolbypassrls
+FROM pg_roles WHERE rolname = 'rh_backend';
+```
+
+S’il n’existe pas, le créer avec une session autorisée à créer des rôles :
+
+```sql
+CREATE ROLE rh_backend LOGIN NOINHERIT NOBYPASSRLS NOCREATEDB NOCREATEROLE NOSUPERUSER;
+```
+
+Ne pas relancer `CREATE ROLE` si le rôle existe déjà ; vérifier ses attributs et ses droits. La création ci-dessus ne définit **aucun mot de passe**. Définir ensuite un mot de passe fort et unique avec `psql` sur un ordinateur de confiance : après connexion à la base en tant qu’administrateur, saisir la commande interactive suivante. `psql` demande le mot de passe sans l’afficher et sans l’écrire dans le fichier de commandes :
+
+```text
+\password rh_backend
+```
+
+Sur Windows, ouvrir PowerShell et lancer `psql --version` pour vérifier que `psql` est disponible. Dans Supabase, **Connect → Direct → Session pooler** fournit les paramètres de connexion administrateur ; ne jamais placer un mot de passe en argument dans PowerShell ou dans l’historique du terminal. Se connecter avec `psql` en demandant le mot de passe de façon interactive et vérifier TLS. Suivre la [documentation Supabase de connexion PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres) si l’outil ou la connexion n’est pas disponible.
+
+**Alternative SQL Editor :** `ALTER ROLE ... PASSWORD` peut définir un mot de passe, mais celui-ci peut rester dans l’historique des requêtes ou dans des journaux. Utiliser de préférence `psql`, ne jamais envoyer la requête remplie dans une conversation et ne pas conserver de secret dans Git. Si un secret a été exposé, le révoquer ou le remplacer.
+
+Enfin, après les scripts `001`, `002` et `004`, exécuter [`database/005_supabase_role_serveur.sql`](database/005_supabase_role_serveur.sql) dans le SQL Editor pour attribuer les droits. Ce rôle ne doit pas être propriétaire ni avoir `BYPASSRLS`. Il a néanmoins accès aux espaces de tous les comptes : conserver ses identifiants uniquement côté serveur et vérifier les filtres d’accès de l’API.
+
+### 4. Préparer `DATABASE_URL` avec le Transaction pooler
+
+L’adresse `https://hibhvszfgldgxzcxhmou.supabase.co` est l’URL **API** du projet, pas une connexion PostgreSQL. L’hôte `db.hibhvszfgldgxzcxhmou.supabase.co:5432` correspond à une connexion directe, pas à l’hôte du pooler.
+
+1. Dans Supabase, cliquer sur **Connect → Direct / Connection string**, puis choisir **Transaction pooler**.
+2. Repérer le nom de l’hôte après `@` et avant `:6543`. Pour le projet communiqué, l’hôte indiqué dans la console est `aws-1-eu-west-1.pooler.supabase.com` ; le vérifier dans Supabase avant utilisation.
+3. Remplacer l’utilisateur administrateur `postgres.<référence-projet>` de la chaîne par `rh_backend.<référence-projet>` et utiliser le **mot de passe du rôle `rh_backend`**, non celui du compte administrateur PostgreSQL. La valeur aura la forme suivante :
+
+   ```text
+   postgresql://rh_backend.hibhvszfgldgxzcxhmou:MOT_DE_PASSE_ENCODE@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
+   ```
+
+4. Remplacer `MOT_DE_PASSE_ENCODE` par le vrai mot de passe **uniquement dans Netlify**, sans crochets ni espaces supplémentaires. La chaîne complète est secrète : ne pas l’envoyer par chat, email ou capture d’écran.
+
+Les caractères spéciaux du mot de passe doivent être encodés en pourcentage **dans la partie mot de passe uniquement** : par exemple `@` devient `%40`, `:` devient `%3A`, `/` devient `%2F`, `#` devient `%23` et `%` devient `%25`. Ne pas encoder le reste de l’URL. Utiliser un outil local de confiance pour les autres caractères, jamais un site de conversion en ligne. Vérifier la connexion TLS avec le rôle et le pooler sur un environnement de test ; en cas d’erreur de certificat, ne pas désactiver sa vérification.
+
+### 5. Configurer Netlify et redéployer
+
+Dans **Netlify → votre site → Site configuration → Environment variables**, ajouter ou modifier :
+
+| Clé | Valeur et usage |
+|---|---|
+| `DATABASE_URL` | Chaîne PostgreSQL complète du rôle `rh_backend` préparée ci-dessus. **Secrète** ; disponible aux Functions côté serveur uniquement. |
+| `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site Netlify, sans chemin ni `/` final, par exemple `https://votre-site.netlify.app`. |
+
+Pour `DATABASE_URL`, cocher **Contains secret values** si l’option est proposée et vérifier que le scope **Functions** est inclus. Renseigner la valeur dans le contexte **Production**. Si chaque contexte a une valeur distincte, ne pas copier la base de production dans les Deploy Previews ou Branch deploys : utiliser des bases et variables isolées, ou ne pas activer ces déploiements.
+
+Enregistrer les variables puis lancer un nouveau déploiement depuis **Deploys**. `netlify.toml` publie uniquement `public/` et déploie les fonctions `login`, `signup-ready` et `workspace`. Si le projet Supabase change, adapter l’URL et la clé publique dans `src/cloud.js` et `netlify/lib/supabase.mjs`, puis reconstruire.
+
+### 6. Inscrire et tester un compte RH
+
+Une fois la base, les fonctions et Netlify configurés :
+
+1. Ouvrir le site Netlify et choisir **Créer un compte**.
+2. Saisir un identifiant numérique unique, par exemple `1005`, une adresse email réelle et un mot de passe personnel d’au moins 12 caractères ; confirmer ce mot de passe.
+3. Si Supabase demande une confirmation, ouvrir le message reçu et suivre son lien, puis revenir sur le site.
+4. Se connecter avec **l’identifiant numérique et le mot de passe**, puis utiliser le bouton **Déconnexion**. L’utilisateur peut être consulté dans **Supabase → Authentication → Users**.
+5. Avec deux comptes de test, vérifier l’isolation, les imports, l’historique, les restaurations, les exports et les emails. Vérifier également RLS via les API Supabase, le refus d’un mauvais mot de passe, les limites de tentatives, Netlify `context.ip` et la connexion TLS. Les tests simulés ne prouvent pas le fonctionnement du service réel.
+
+**Inscription ouverte :** toute personne ayant accès au site peut choisir un identifiant RH libre et créer son espace ; la confirmation d’email ne prouve pas son appartenance au service RH. Évaluer et renforcer ce dispositif avant d’importer des données sensibles. Aucun mot de passe ni compte `1005` n’est fourni par défaut. L’interface ne propose pas encore la réinitialisation du mot de passe : prévoir une procédure sécurisée dans Supabase.
 
 ### Données et comptes précédents
 
@@ -214,7 +288,7 @@ Lancer le serveur local (`npm start`) dans un premier terminal, puis dans un sec
 
 ```bash
 npm test                      # règles métier
-npm run test:cloud            # API et vérification JWT, base simulée
+npm run test:cloud            # API et validation Supabase simulées
 npm run test:supabase         # migrations, contrôle RLS et connexion simulée
 npm run test:browser          # parcours navigateur et accessibilité
 node tests/cloud-browser.mjs  # connexion et API simulées
