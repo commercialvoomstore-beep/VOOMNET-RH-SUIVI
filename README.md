@@ -117,14 +117,24 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
 ## Emails et alertes
 
-- Modèle dynamique avec variables `{Nom}`, `{Matricule}`, `{Service}`, `{Date_Fin_Contrat}`, `{Jours_Restants}`, `{Total_Absences}`, `{Statut_Prime}`, `{Retard_Minutes}`, `{Duree_Moyenne}`, `{Periode}`.
-- Aperçu individuel modifiable, bouton `mailto:` prérempli, copie RH configurable.
-- Envoi groupé **uniquement après confirmation explicite** des destinataires et du prestataire.
-- **EmailJS** : Service ID, Template ID, clé publique. Le modèle doit consommer `to_email`, `cc_email`, `subject`, `message`.
-- **Webhook HTTPS** : relais serveur pour Microsoft Graph ou SMTP. Payload JSON documenté dans l’interface. Le jeton Bearer facultatif reste en mémoire de session et n’est jamais écrit dans le stockage ou les exports.
-- Microsoft Graph nécessite OAuth côté serveur ; SMTP n’est pas un protocole navigateur. Aucun mot de passe SMTP ni secret Graph ne doit être saisi dans le HTML. Le relais sécurisé n’est pas fourni par ce projet et doit être configuré séparément. Si Outlook est en panne sur le web et l’ordinateur, `mailto:` peut aussi échouer ; une panne du fournisseur peut affecter Graph/SMTP. EmailJS ou un autre relais n’est une solution que s’il est opérationnel et configuré.
-- Les motifs médicaux, le score et les recommandations défavorables ne sont pas inclus dans les emails.
-- « Accepté par l’API » signifie acceptation de la requête, pas remise confirmée. Aucun renvoi automatique n’est effectué.
+- Deux campagnes manuelles : **fins de contrat** et **primes disponibles**, chacune avec son modèle modifiable et un aperçu individuel. La prime est annoncée sous réserve de validation RH. Les imports d’absences et, si le contrôle croisé est actif, de pointage sont nécessaires avant un envoi de primes. Leur présence ne garantit pas leur exhaustivité : vérifiez la période, les données et les destinataires.
+- Avant chaque envoi, le RH sélectionne les destinataires et confirme explicitement. Le canal Outlook ci-dessous ajoute une copie individuelle à l’adresse RH configurée et, si elle est renseignée, envoie également un récapitulatif séparé des nombres de requêtes acceptées et non confirmées. Aucun récapitulatif n’est lancé après une interruption. Les canaux EmailJS et webhook conservent leur fonctionnement antérieur : pas de récapitulatif séparé automatique.
+- Les variables disponibles sont `{Nom}`, `{Matricule}`, `{Service}`, `{Date_Fin_Contrat}`, `{Jours_Restants}`, `{Total_Absences}`, `{Statut_Prime}`, `{Retard_Minutes}`, `{Duree_Moyenne}`, `{Periode}`. Le modèle de contrat par défaut inclut un bilan d’assiduité : relisez et adaptez-le. Les motifs médicaux, le score et les recommandations défavorables ne sont pas ajoutés par les variables fournies.
+- « Accepté par l’API » ne prouve pas la remise. Après un délai ou une interruption, un message peut avoir été envoyé : vérifier les éléments envoyés Outlook avant toute nouvelle tentative. Aucun renvoi ni dédoublonnage automatique n’est effectué ; l’historique des résultats est limité à la session.
+- **Aucun envoi planifié n’est activé**. Cette version ne permet pas l’envoi automatique en l’absence du navigateur ; les calendriers, le stockage sécurisé et la prévention des doublons nécessitent un développement et une validation supplémentaires.
+- **EmailJS** reste disponible avec Service ID, Template ID et clé publique. Le modèle doit consommer `to_email`, `cc_email`, `subject`, `message`. Le **webhook HTTPS externe** reste disponible avec son propre relais ; son jeton facultatif n’est conservé qu’en mémoire de session. `mailto:` ouvre un message à valider dans une messagerie.
+
+### Configuration du relais Outlook personnel
+
+Le relais Netlify de ce dépôt prend en charge **les comptes Microsoft personnels** via une autorisation déléguée `Mail.Send` : il utilise la boîte que l’utilisateur connecte, pas une boîte commune partagée. Il ne demande pas de mot de passe Outlook au site. Un compte professionnel ou une boîte partagée exige une adaptation et n’est pas pris en charge par ce flux. La connexion utilise MSAL dans le navigateur et un jeton Microsoft éphémère envoyé au relais pour chaque message ; ce jeton donne le pouvoir d’envoyer des emails depuis la boîte connectée et reste sensible même s’il n’est pas un mot de passe. Il n’est pas écrit dans la base ni dans les paramètres ; une fermeture ou une déconnexion exige de reconnecter Outlook. Les jetons restent exposés au JavaScript du site : utiliser un poste de confiance et protéger contre XSS.
+
+1. Dans [Microsoft Entra / App registrations](https://entra.microsoft.com/), créer une application dont les types de comptes prennent en charge **les comptes Microsoft personnels**. L’accès à l’enregistrement peut nécessiter un annuaire ou des droits Microsoft adaptés. Noter l’**Application (client) ID**, qui est public ; ne pas créer ni saisir de secret client pour ce flux navigateur.
+2. Dans **Authentication**, ajouter la plateforme **Single-page application** (pas Web) avec l’URI de redirection exacte `https://rh-suivi.netlify.app/outlook-callback.html` ou l’URL correspondante de votre site. Autoriser les fenêtres pop-up côté navigateur. Configurer dans **API permissions → Microsoft Graph → Delegated permissions** la permission **Mail.Send** pour le compte personnel, et accepter le consentement Microsoft au moment de la connexion. Cette permission permet d’envoyer au nom du compte connecté ; ne pas accorder de permission d’application générale. Voir la [documentation Microsoft](https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0).
+3. Dans **Netlify → Site configuration → Environment variables**, définir `RH_ALLOWED_ORIGIN` sur l’origine HTTPS exacte, par exemple `https://rh-suivi.netlify.app` sans slash final, pour le contexte Production et les Functions, puis redéployer. Le build publie `outlook-callback.html` et la fonction `outlook-send`. Les prévisualisations utilisent une origine différente : configurez-les séparément avec un projet de test et une URI de redirection correspondante, ou laissez le relais désactivé. Aucune clé service-role ou mot de passe Microsoft n’est nécessaire.
+4. Dans l’application RH, ouvrir **Paramètres → Connexion d’envoi → Outlook personnel**, saisir l’ID public et enregistrer. Cliquer **Connecter Outlook**, choisir la bonne boîte et accepter les autorisations sur le site Microsoft. Vérifier l’adresse affichée. Enregistrer l’adresse RH dans les règles ; sauvegarder les paramètres via **Espace RH en ligne** si nécessaire. La connexion Outlook elle-même n’est pas sauvegardée.
+5. Pour un essai, utiliser des données fictives et un destinataire vous appartenant. Vérifier aperçu, adresse, copie RH et récapitulatif avant toute campagne réelle. Activer aussi des protections et limites d’usage côté Netlify et Microsoft ; le relais ne fournit pas de quota distribué ni d’idempotence. La validation du jeton Supabase et l’accès à l’espace actif sont vérifiés à chaque requête, puis Microsoft vérifie son propre jeton. La sélection des primes est une protection de l’interface, pas une règle imposée par le relais : une personne possédant ses jetons valides peut appeler le relais pour envoyer un message au nom de sa propre boîte.
+
+Si le relais n’est pas configuré ou si Outlook est indisponible, aucun envoi réel n’est garanti. Le serveur `npm start` est statique et **n’exécute pas** les fonctions Netlify. Les tests automatiques simulent Microsoft : ils ne prouvent pas le consentement, la connexion réelle ou la remise des emails.
 
 ## Exports et impression
 
@@ -162,7 +172,7 @@ Les comptes Supabase existants gardent leur UUID et leur espace : utilisez leur 
 1. Prévoir une interruption du service, sauvegarder et vérifier la restauration. **Ne pas recréer les utilisateurs Supabase.** Le script conserve les UUID, données, historiques et statut `active` existants ; il ne migre pas les comptes ni données Neon. Les espaces restent associés à leur UUID d’origine.
 2. Dans le SQL Editor du projet dédié, exécuter [`database/006_supabase_email.sql`](database/006_supabase_email.sql) en entier. Ce script transactionnel et relançable crée les tables manquantes, retire le trigger `voomnet_rh_on_signup` qui exigeait un identifiant RH, retire les droits de l’ancien rôle serveur sur les tables RH et crée la fonction sécurisée. Les anciennes tables d’identifiants sont conservées sans être utilisées. Vérifier les éventuels privilèges et politiques ajoutés hors de ces migrations. **Ne pas réexécuter `004` ou `005` après `006`** : ils réinstalleraient l’ancien mécanisme ou ses droits.
 3. Déployer cette version sur Netlify immédiatement après la migration. L’ancien site ne pourra plus accéder aux espaces dès la révocation des droits de `rh_backend` ; la nouvelle version ne fonctionnera pas correctement tant que `006` n’est pas appliqué. En cas d’échec, arrêter le basculement et utiliser la sauvegarde et le plan de retour testés ; ne pas supprimer ou recréer les utilisateurs.
-4. `DATABASE_URL`, `RH_ALLOWED_ORIGIN`, le rôle `rh_backend` et les anciennes fonctions Netlify ne sont plus requis. La migration retire les droits connus de ce rôle mais ne le supprime pas, ni ne révoque son mot de passe ou ses autres droits éventuels. Un administrateur doit examiner et révoquer/renouveler séparément le secret exposé et les autres accès, puis retirer les variables devenues inutiles après vérification.
+4. `DATABASE_URL`, le rôle `rh_backend` et les anciennes fonctions Netlify RH ne sont plus requis. Le nouveau relais Outlook utilise `RH_ALLOWED_ORIGIN` comme expliqué ci-dessus. La migration retire les droits connus de ce rôle mais ne le supprime pas, ni ne révoque son mot de passe ou ses autres droits éventuels. Un administrateur doit examiner et révoquer/renouveler séparément le secret exposé et les autres accès, puis retirer les variables devenues inutiles après vérification.
 5. Vérifier avec deux comptes de test : inscription, réception et confirmation d’email, mauvais mot de passe, récupération, déconnexion, imports des trois types, historique et restauration, conflits de version, exports, emails et isolation croisée (y compris accès direct à la Data API). Tester aussi un ancien compte et ses imports. L’accès refusé à un compte `active = false` reste refusé ; ne pas le réactiver implicitement.
 
 ### Données précédentes
@@ -200,7 +210,9 @@ Le serveur écoute sur le port `3000` par défaut (`PORT` permet de le modifier)
 | `src/cloud.js` | Inscription et connexion Supabase, actions de l’espace personnel et historique des imports. |
 | `database/006_supabase_email.sql` | Migration Supabase, protections et fonction d’espace privé. |
 | `database/001_initial.sql` à `005_supabase_role_serveur.sql` | Anciennes migrations historiques ; ne pas réappliquer après `006`. |
-| `netlify.toml` | Build et publication du site. |
+| `netlify.toml` | Build, publication du site et déploiement des fonctions. |
+| `netlify/functions/outlook-send.mjs` | Relais d’envoi manuel Outlook ; validation des sessions et origine. |
+| `outlook-callback.html` | Page de retour OAuth Microsoft pour la fenêtre de connexion. |
 | `scripts/build.mjs` | Génération de `index.html` depuis les sources et les données fictives. |
 | `scripts/create-rh-user.mjs`, `scripts/admin-auth.mjs` | Outils historiques pour Neon Auth uniquement ; non utilisés avec Supabase. |
 | `tests/` | Tests métier, API et navigateurs. |
@@ -213,6 +225,7 @@ Lancer le serveur local (`npm start`) dans un premier terminal, puis dans un sec
 npm test                      # règles métier
 npm run test:cloud            # migration et isolation simulées
 npm run test:supabase         # migration et contrôle de sécurité simulés
+npm run test:outlook          # relais Outlook, avec services simulés
 npm run test:browser          # parcours navigateur et accessibilité
 node tests/cloud-browser.mjs  # parcours Auth et Data API simulés
 ```

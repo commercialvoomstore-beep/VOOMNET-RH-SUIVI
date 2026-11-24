@@ -1,6 +1,7 @@
 [build]
-  command = "npm run build && mkdir -p public && cp index.html public/index.html"
+  command = "npm run build && mkdir -p public && cp index.html outlook-callback.html public/"
   publish = "public"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "22"
