@@ -19,20 +19,20 @@ async function mockAuthorized(ctx) {
   const session = { access_token: jwt, refresh_token: 'refresh-token', token_type: 'bearer', expires_at: 1893456000, expires_in: 1000000, user: { id: '4bdaeb19-4411-4451-8bc7-97d76f0c1871', email: 'rh@example.test', user_metadata: { rh_identifier: '1005' } } };
   await ctx.addInitScript(session => { if (location.protocol.startsWith('http') && !localStorage.getItem('sb-hibhvszfgldgxzcxhmou-auth-token')) localStorage.setItem('sb-hibhvszfgldgxzcxhmou-auth-token', JSON.stringify(session)); }, session);
   let version = 0, snapshot = { version: 1, contracts: {}, settings: {} }, active = { employees: null, absences: null, pointage: null }, sequence = 0; const imports = {};
-  await ctx.route('**/.netlify/functions/workspace**', async route => {
-    const req = route.request(), u = new URL(req.url()), action = u.searchParams.get('action'); let response;
-    if (req.method() === 'GET' && action === 'source') response = { source: imports[u.searchParams.get('id')] };
-    else if (req.method() === 'GET' && action === 'history') response = { history: { employees: [], absences: [], pointage: [] } };
-    else if (req.method() === 'GET') response = { version, snapshot, active };
+  await ctx.route('**/rest/v1/rpc/voomnet_workspace', async route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST,OPTIONS' } });
+    const data = route.request().postDataJSON(), action = data.p_action; let response;
+    if (action === 'source') response = { source: imports[data.p_id] };
+    else if (action === 'history') response = { history: { employees: [], absences: [], pointage: [] } };
+    else if (action === 'get') response = { version, snapshot, active };
     else {
-      const data = req.postDataJSON();
-      if (data.expectedVersion !== version) return route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"Conflit"}' });
-      if (action === 'import') { const id = String(++sequence); imports[id] = data.source; active[data.kind] = id; }
-      else if (action === 'remove') active[data.kind] = null;
-      else if (req.method() === 'PUT') snapshot = data.snapshot;
+      if (data.p_expected_version !== version) return route.fulfill({ status: 400, headers: { 'access-control-allow-origin': '*' }, contentType: 'application/json', body: '{"message":"VOOMNET_CONFLICT"}' });
+      if (action === 'import') { const id = String(++sequence); imports[id] = data.p_source; active[data.p_kind] = id; }
+      else if (action === 'remove') active[data.p_kind] = null;
+      else if (action === 'save') snapshot = data.p_snapshot;
       response = { version: ++version };
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
+    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, contentType: 'application/json', body: JSON.stringify(response) });
   });
 }
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'fr-FR', timezoneId: 'Africa/Abidjan', acceptDownloads: true });
@@ -40,7 +40,7 @@ await mockAuthorized(context);
 const page = await context.newPage(); page.setDefaultTimeout(10000);
 const errors = [], initialRequests = [];
 page.on('pageerror', error => errors.push(error.message));
-page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1:') && !request.url().startsWith('data:')) initialRequests.push(request.url()); });
+page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1:') && !request.url().startsWith('data:') && !request.url().startsWith('https://hibhvszfgldgxzcxhmou.supabase.co/')) initialRequests.push(request.url()); });
 const url = process.env.TEST_URL || 'http://127.0.0.1:3000';
 const step = name => console.log('✓', name);
 const domClick = selector => page.evaluate(s => { const el = document.querySelector(s); if (!el) throw new Error('Élément absent : ' + s); el.click(); }, selector);

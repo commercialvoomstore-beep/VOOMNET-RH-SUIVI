@@ -21,22 +21,33 @@
       <section class="login-panel" aria-labelledby="login-title"><div class="login-card">
         <div class="login-card-kicker"><span></span> VOTRE ESPACE RH PERSONNEL</div>
         <h2 id="login-title">Bienvenue sur<br>votre espace RH<span>.</span></h2>
-        <p class="login-description">Connectez-vous avec votre identifiant RH et votre mot de passe pour accéder à l’application.</p>
+        <p class="login-description">Connectez-vous avec votre adresse e-mail et votre mot de passe pour accéder à l’application.</p>
         <form id="login-form" class="login-form">
-          <label for="login-id">Identifiant RH</label><input id="login-id" name="identifier" type="text" autocomplete="username" inputmode="numeric" pattern="[0-9]{1,16}" maxlength="16" placeholder="Ex. 1005" required>
+          <label for="login-email">Adresse e-mail</label><input id="login-email" name="email" type="email" autocomplete="username" maxlength="254" required>
           <label for="login-password">Mot de passe</label><div class="login-password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Votre mot de passe" required><button id="login-toggle-password" type="button" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></div>
           <div id="login-message" class="login-message" role="status" aria-live="polite"></div>
           <button class="login-submit" type="submit">Se connecter <span aria-hidden="true">→</span></button>
         </form>
         <form id="signup-form" class="login-form" hidden>
-          <label for="signup-id">Identifiant RH numérique</label><input id="signup-id" name="identifier" type="text" autocomplete="username" inputmode="numeric" pattern="[0-9]{1,16}" maxlength="16" placeholder="Ex. 1005" required>
           <label for="signup-email">Adresse e-mail réelle</label><input id="signup-email" name="email" type="email" autocomplete="email" maxlength="254" required>
           <label for="signup-password">Mot de passe (12 caractères minimum)</label><input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
           <label for="signup-confirm">Confirmer le mot de passe</label><input id="signup-confirm" name="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
           <button class="login-submit" type="submit">Créer mon compte <span aria-hidden="true">→</span></button>
         </form>
         <div id="signup-message" class="login-message" role="status" aria-live="polite"></div>
-        <p class="login-switch"><button id="auth-switch" type="button">Créer un compte</button></p>
+        <form id="forgot-form" class="login-form" hidden>
+          <label for="forgot-email">Adresse e-mail du compte</label><input id="forgot-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+          <button class="login-submit" type="submit">Envoyer le lien</button>
+          <div id="forgot-message" class="login-message" role="status" aria-live="polite"></div>
+        </form>
+        <form id="recovery-form" class="login-form" hidden>
+          <label for="recovery-password">Nouveau mot de passe (12 caractères minimum)</label><input id="recovery-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <label for="recovery-confirm">Confirmer le nouveau mot de passe</label><input id="recovery-confirm" name="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <button class="login-submit" type="submit">Modifier le mot de passe</button>
+          <div id="recovery-message" class="login-message" role="status" aria-live="polite"></div>
+          <button id="recovery-back" type="button">Retour à la connexion</button>
+        </form>
+        <p class="login-switch"><button id="auth-switch" type="button">Créer un compte</button> · <button id="forgot-switch" type="button">Mot de passe oublié ?</button></p>
         <div class="login-help"><span aria-hidden="true">✳</span><p><strong>Inscription personnelle</strong><br>Toute personne peut créer un compte personnel. Utilisez une adresse e-mail valide pour le confirmer.</p></div>
         <p class="login-security">Connexion internet requise · Comptes personnels</p>
       </div></section>

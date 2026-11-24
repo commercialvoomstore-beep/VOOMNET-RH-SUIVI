@@ -1,7 +1,6 @@
 [build]
   command = "npm run build && mkdir -p public && cp index.html public/index.html"
   publish = "public"
-  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "22"

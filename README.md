@@ -2,7 +2,7 @@
 
 Application d’aide à la décision pour le suivi des **primes trimestrielles**, des **contrats** et des **alertes RH**. L’interface est livrée en un fichier [`index.html`](index.html), avec Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et une démonstration fictive intégrés : aucun CDN n’est requis.
 
-**L’application ne fonctionne pas de manière autonome hors ligne** : l’accès à l’interface nécessite Supabase Auth, les fonctions Netlify, PostgreSQL et une connexion internet. La connexion réelle, la base et les comptes RH doivent être configurés et vérifiés avant utilisation.
+**L’application ne fonctionne pas de manière autonome hors ligne** : l’accès à l’interface nécessite Supabase Auth, l’API de données Supabase, PostgreSQL et une connexion internet. La connexion réelle, la base et les comptes RH doivent être configurés et vérifiés avant utilisation.
 
 ### Sommaire
 
@@ -17,14 +17,14 @@ Application d’aide à la décision pour le suivi des **primes trimestrielles**
 
 ## Démarrage
 
-- **Usage en ligne** : ouvrir le site Netlify configuré, puis se connecter avec un compte RH autorisé. Le fichier `index.html` seul, sans API et connexion, affiche la page de connexion mais ne débloque pas l’application.
-- **Aperçu local** : `npm install` puis `npm start` (port `3000`, configurable via `PORT`). Ce serveur statique permet de visualiser la page de connexion, mais ne fournit pas la fonction Netlify ; la connexion réelle ne fonctionnera pas sans environnement Netlify et configuration Supabase.
+- **Usage en ligne** : ouvrir le site Netlify configuré, puis se connecter avec un compte personnel confirmé. Le fichier `index.html` seul, sans API et connexion, affiche la page de connexion mais ne débloque pas l’application.
+- **Aperçu local** : `npm install` puis `npm start` (port `3000`, configurable via `PORT`). Ce serveur statique permet aussi de tester la connexion si Supabase est configuré pour son origine et si la migration est appliquée ; privilégier un projet de test isolé.
 - **Régénérer le fichier autonome** : `npm run build`.
 - **Tests** : `npm test` (moteur de règles) et `npm run test:browser` (nécessite `npm start` dans un autre terminal).
 
 Les sources sont dans `src/`, les fichiers **fictifs** de démonstration dans `data/`, et le fichier HTML généré à la racine. Pour commencer en tant que RH :
 
-1. Créez un compte avec un identifiant numérique, une adresse e-mail réelle et un mot de passe, confirmez votre adresse si Supabase le demande, puis connectez-vous avec cet identifiant et ce mot de passe.
+1. Créez un compte avec votre adresse e-mail et un mot de passe, confirmez votre adresse si Supabase le demande, puis connectez-vous avec cette adresse et ce mot de passe.
 2. Dans **Données & imports**, importez les absences, le pointage et, si disponible, le référentiel des collaborateurs. Chaque import réussi est enregistré automatiquement dans votre espace personnel. Le bouton de démonstration charge uniquement des données fictives.
 3. Vérifiez les dates, les anomalies, le périmètre actif, les décisions de prime et les contrats ; configurez les alertes si nécessaire.
 4. Depuis **Espace RH en ligne**, sauvegardez séparément les fiches et paramètres. Consultez **Historique des imports** pour rétablir une version précédente. L’actualisation charge la version enregistrée et remplace les modifications locales non sauvegardées.
@@ -135,124 +135,51 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
 ## Confidentialité et sécurité
 
-- Chaque import validé est transmis à l’API Netlify et enregistré dans une table d’historique distincte par type. Le contenu des lignes normalisées est conservé en JSONB dans ces tables : ce ne sont pas des colonnes PostgreSQL séparées pour chaque champ source. Les fiches et paramètres nécessitent une sauvegarde manuelle.
-- L’API vérifie le jeton auprès de Supabase Auth, puis filtre les lectures et écritures par l’UUID du propriétaire. Les tables RH sont inaccessibles aux rôles navigateur Supabase `anon` et `authenticated` grâce aux droits et à RLS ; le rôle serveur a accès aux données de tous les comptes et doit rester secret.
-- **Inscription ouverte et accès automatique**, conformément au choix demandé : toute personne pouvant accéder au site peut créer un compte et revendiquer un identifiant RH encore libre. La vérification d’email ne prouve pas l’appartenance à l’équipe RH. Ne pas utiliser ce mode pour des données RH sensibles sans validation du risque et contrôles complémentaires (invitations/approbation ou restriction réseau).
-- Le navigateur conserve la session Supabase dans `localStorage`, non chiffré et accessible au JavaScript du site. Protéger contre XSS, utiliser un poste de confiance, se déconnecter et protéger les exports. Une révocation ou déconnexion ne détruit pas les données déjà téléchargées ; l’état de session n’est pas vérifié en continu.
-- La fonction de connexion limite les tentatives par identifiant et par IP sur 15 minutes, avec risque de blocage temporaire d’un utilisateur en cas d’abus. Configurer également les limites et protections d’inscription dans Supabase et Netlify : l’API Auth publique Supabase est accessible indépendamment de la fonction. Surveiller et nettoyer les compteurs anciens.
-- Les anciens secrets divulgués doivent être révoqués. Le dépôt et les anciens déploiements peuvent conserver des données RH réelles dans leur historique : restreindre l’accès et organiser leur traitement séparément. Ne jamais intégrer données réelles ou secrets dans le HTML/Git.
+- Chaque import validé est transmis à l’API de données Supabase et enregistré en JSONB dans une table d’historique par type ; les fiches et paramètres nécessitent une sauvegarde manuelle.
+- Les tables RH ne sont pas directement accessibles aux rôles `anon` et `authenticated`. La fonction SQL `voomnet_workspace`, exécutée avec des privilèges élevés, identifie le propriétaire par `auth.uid()` issu du jeton validé par Supabase ; chaque opération est filtrée par cet UUID. Elle vérifie aussi le statut actif, la version et la forme des données. Vérifier qu’aucune autre politique, privilège ou fonction ne donne accès aux tables, notamment si le projet n’est pas vierge.
+- **Inscription ouverte et accès automatique** : toute personne peut créer son espace. La confirmation d’email ne prouve pas l’appartenance au service RH. Ne pas utiliser avec des données sensibles sans évaluer ce risque et mettre en place les contrôles complémentaires appropriés.
+- La session est conservée dans `localStorage`, accessible au JavaScript du site. Protéger le site contre XSS, utiliser un poste de confiance, se déconnecter et protéger les exports. Une révocation ne détruit pas les données déjà téléchargées ; l’état de session n’est pas vérifié en continu.
+- Configurer les limites et protections de Supabase Auth : l’API Auth publique est accessible directement, sans les anciennes limites par identifiant de la fonction Netlify. Les anciens secrets divulgués doivent être révoqués ou renouvelés ; l’ancien mot de passe `rh_backend` partagé dans la conversation doit être remplacé. Le dépôt et les anciens déploiements peuvent conserver des données RH dans leur historique : organiser leur traitement séparément.
 
 ## Connexion au service RH
 
-L’inscription demande un identifiant RH numérique unique de 1 à 16 chiffres, une **véritable adresse email** et un mot de passe d’au moins 12 caractères. Supabase Auth gère les mots de passe et l’éventuelle confirmation d’email. L’identifiant est enregistré lors de la création et reste stable même si les métadonnées du compte changent. Pour se connecter, saisir l’identifiant et le mot de passe ; l’adresse est retrouvée uniquement côté serveur. Un bouton **Déconnexion** est visible dans la barre supérieure.
+Inscrivez-vous avec une adresse e-mail réelle et un mot de passe d’au moins 12 caractères. Suivez le lien de confirmation si nécessaire, puis connectez-vous avec **la même adresse e-mail et le mot de passe**. Le lien **Mot de passe oublié ?** envoie un lien de réinitialisation ; choisissez ensuite un nouveau mot de passe. Le bouton **Déconnexion** est dans la barre supérieure. Aucun mot de passe ni compte n’est préinstallé.
 
-Si la confirmation d’email est activée dans Supabase, suivre le lien reçu avant de se connecter. L’application ne dispose pas encore d’une interface de réinitialisation du mot de passe ; prévoir une procédure sécurisée dans Supabase. La création d’un compte ne migre pas les comptes ou données Neon. Aucun compte 1005 ni mot de passe n’est préinstallé.
+Les comptes Supabase existants gardent leur UUID et leur espace : utilisez leur adresse e-mail existante, pas l’ancien identifiant numérique. En cas de mot de passe oublié, utilisez la réinitialisation. Ne créez pas un nouveau compte pour récupérer un ancien espace : un nouveau compte a un nouvel UUID.
 
 ## Déploiement Netlify + Supabase (configuration manuelle requise)
 
-**La configuration réelle et le fonctionnement de bout en bout ne sont pas confirmés par les tests locaux.** Utiliser un projet Supabase dédié et isolé : le script `004` ajoute un déclencheur qui exige un identifiant RH à chaque inscription Auth. Sauvegarder et vérifier la restauration avant toute modification. Tester avec des données fictives avant utilisation réelle.
+**Cette mise à jour ne configure pas votre projet distant.** Sauvegarder la base et tester la restauration puis essayer sur un projet de test dédié avec des données fictives avant production. Les tests locaux simulent Supabase : ils ne prouvent ni la configuration réelle, ni la livraison des emails, ni les permissions ou limites du service hébergé.
 
-### 1. Configurer Supabase Auth
+### 1. Configurer Supabase
 
-1. Ouvrir [Supabase](https://supabase.com/dashboard) et sélectionner le projet `hibhvszfgldgxzcxhmou`.
-2. Dans **Authentication**, activer l’inscription par email et mot de passe. Imposer une longueur minimale de 12 caractères côté Supabase : un appel direct à l’API peut contourner la validation du formulaire.
-3. Activer la confirmation d’email et configurer l’envoi des messages. Dans **Authentication → URL Configuration**, définir l’URL HTTPS du site Netlify et autoriser son URL de retour. Vérifier la réception et les protections contre les inscriptions abusives.
-4. Cette intégration est prévue pour le fournisseur **email** ; les autres modes d’inscription exigent une adaptation du déclencheur.
+1. Dans le projet Supabase dédié, activer l’inscription par e-mail et mot de passe, la confirmation d’e-mail et l’envoi des messages ; configurer SMTP si nécessaire pour les usages réels. Imposer un minimum de 12 caractères côté Supabase : le navigateur ne suffit pas. Activer des limites adaptées contre les abus et désactiver les fournisseurs Auth inutilisés, y compris les connexions anonymes.
+2. Dans **Authentication → URL Configuration**, définir la Site URL HTTPS de production et autoriser les URLs de redirection du site, y compris `https://rh-suivi.netlify.app/` et `https://rh-suivi.netlify.app/?recovery=1` (ou celles de votre site). Adapter aussi les URLs des environnements de test séparés. Vérifier les modèles d’email et la réception réelle des liens de confirmation et de réinitialisation.
+3. La Data API doit être activée et exposer le schéma `public` pour la fonction `voomnet_workspace`. La clé publishable et l’URL déjà présentes dans `src/cloud.js` sont publiques. Ne jamais intégrer la clé secrète/service-role ou un mot de passe dans le client, Git ou le chat. Pour un autre projet, modifier l’URL et la clé publishable dans `src/cloud.js`, puis reconstruire.
 
-La clé `sb_publishable` et l’URL du projet sont publiques et déjà intégrées dans le client et les fonctions ; elles ne donnent pas à elles seules accès aux données protégées et ne remplacent pas RLS. Ne jamais mettre de clé `service_role`, de clé secrète ou de mot de passe dans le code client, Git ou une conversation.
+### 2. Migrer la base et déployer
 
-### 2. Créer les tables et protéger les données
+1. Prévoir une interruption du service, sauvegarder et vérifier la restauration. **Ne pas recréer les utilisateurs Supabase.** Le script conserve les UUID, données, historiques et statut `active` existants ; il ne migre pas les comptes ni données Neon. Les espaces restent associés à leur UUID d’origine.
+2. Dans le SQL Editor du projet dédié, exécuter [`database/006_supabase_email.sql`](database/006_supabase_email.sql) en entier. Ce script transactionnel et relançable crée les tables manquantes, retire le trigger `voomnet_rh_on_signup` qui exigeait un identifiant RH, retire les droits de l’ancien rôle serveur sur les tables RH et crée la fonction sécurisée. Les anciennes tables d’identifiants sont conservées sans être utilisées. Vérifier les éventuels privilèges et politiques ajoutés hors de ces migrations. **Ne pas réexécuter `004` ou `005` après `006`** : ils réinstalleraient l’ancien mécanisme ou ses droits.
+3. Déployer cette version sur Netlify immédiatement après la migration. L’ancien site ne pourra plus accéder aux espaces dès la révocation des droits de `rh_backend` ; la nouvelle version ne fonctionnera pas correctement tant que `006` n’est pas appliqué. En cas d’échec, arrêter le basculement et utiliser la sauvegarde et le plan de retour testés ; ne pas supprimer ou recréer les utilisateurs.
+4. `DATABASE_URL`, `RH_ALLOWED_ORIGIN`, le rôle `rh_backend` et les anciennes fonctions Netlify ne sont plus requis. La migration retire les droits connus de ce rôle mais ne le supprime pas, ni ne révoque son mot de passe ou ses autres droits éventuels. Un administrateur doit examiner et révoquer/renouveler séparément le secret exposé et les autres accès, puis retirer les variables devenues inutiles après vérification.
+5. Vérifier avec deux comptes de test : inscription, réception et confirmation d’email, mauvais mot de passe, récupération, déconnexion, imports des trois types, historique et restauration, conflits de version, exports, emails et isolation croisée (y compris accès direct à la Data API). Tester aussi un ancien compte et ses imports. L’accès refusé à un compte `active = false` reste refusé ; ne pas le réactiver implicitement.
 
-Dans le **SQL Editor** du projet dédié, copier et exécuter les fichiers suivants **dans l’ordre** :
+### Données précédentes
 
-1. [`database/001_initial.sql`](database/001_initial.sql)
-2. [`database/002_individual_imports.sql`](database/002_individual_imports.sql)
-3. [`database/004_supabase.sql`](database/004_supabase.sql)
-
-Le dernier script configure notamment RLS, retire les accès navigateur aux tables RH et installe le déclencheur d’inscription. Vérifier qu’aucune autre politique ou privilège existant ne donne accès aux données RH. **Ne pas exécuter `003_autoriser_utilisateur_rh.sql` pour Supabase** : il concerne Neon Auth.
-
-### 3. Créer le rôle serveur `rh_backend`
-
-Ce rôle PostgreSQL sert **uniquement aux fonctions Netlify**. Il n’est pas le compte RH `1005`. Un administrateur peut vérifier s’il existe dans le SQL Editor :
-
-```sql
-SELECT rolname, rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolbypassrls
-FROM pg_roles WHERE rolname = 'rh_backend';
-```
-
-S’il n’existe pas, le créer avec une session autorisée à créer des rôles :
-
-```sql
-CREATE ROLE rh_backend LOGIN NOINHERIT NOBYPASSRLS NOCREATEDB NOCREATEROLE NOSUPERUSER;
-```
-
-Ne pas relancer `CREATE ROLE` si le rôle existe déjà ; vérifier ses attributs et ses droits. La création ci-dessus ne définit **aucun mot de passe**. Définir ensuite un mot de passe fort et unique avec `psql` sur un ordinateur de confiance : après connexion à la base en tant qu’administrateur, saisir la commande interactive suivante. `psql` demande le mot de passe sans l’afficher et sans l’écrire dans le fichier de commandes :
-
-```text
-\password rh_backend
-```
-
-Sur Windows, ouvrir PowerShell et lancer `psql --version` pour vérifier que `psql` est disponible. Dans Supabase, **Connect → Direct → Session pooler** fournit les paramètres de connexion administrateur ; ne jamais placer un mot de passe en argument dans PowerShell ou dans l’historique du terminal. Se connecter avec `psql` en demandant le mot de passe de façon interactive et vérifier TLS. Suivre la [documentation Supabase de connexion PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres) si l’outil ou la connexion n’est pas disponible.
-
-**Alternative SQL Editor :** `ALTER ROLE ... PASSWORD` peut définir un mot de passe, mais celui-ci peut rester dans l’historique des requêtes ou dans des journaux. Utiliser de préférence `psql`, ne jamais envoyer la requête remplie dans une conversation et ne pas conserver de secret dans Git. Si un secret a été exposé, le révoquer ou le remplacer.
-
-Enfin, après les scripts `001`, `002` et `004`, exécuter [`database/005_supabase_role_serveur.sql`](database/005_supabase_role_serveur.sql) dans le SQL Editor pour attribuer les droits. Ce rôle ne doit pas être propriétaire ni avoir `BYPASSRLS`. Il a néanmoins accès aux espaces de tous les comptes : conserver ses identifiants uniquement côté serveur et vérifier les filtres d’accès de l’API.
-
-### 4. Préparer `DATABASE_URL` avec le Transaction pooler
-
-L’adresse `https://hibhvszfgldgxzcxhmou.supabase.co` est l’URL **API** du projet, pas une connexion PostgreSQL. L’hôte `db.hibhvszfgldgxzcxhmou.supabase.co:5432` correspond à une connexion directe, pas à l’hôte du pooler.
-
-1. Dans Supabase, cliquer sur **Connect → Direct / Connection string**, puis choisir **Transaction pooler**.
-2. Repérer le nom de l’hôte après `@` et avant `:6543`. Pour le projet communiqué, l’hôte indiqué dans la console est `aws-1-eu-west-1.pooler.supabase.com` ; le vérifier dans Supabase avant utilisation.
-3. Remplacer l’utilisateur administrateur `postgres.<référence-projet>` de la chaîne par `rh_backend.<référence-projet>` et utiliser le **mot de passe du rôle `rh_backend`**, non celui du compte administrateur PostgreSQL. La valeur aura la forme suivante :
-
-   ```text
-   postgresql://rh_backend.hibhvszfgldgxzcxhmou:MOT_DE_PASSE_ENCODE@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
-   ```
-
-4. Remplacer `MOT_DE_PASSE_ENCODE` par le vrai mot de passe **uniquement dans Netlify**, sans crochets ni espaces supplémentaires. La chaîne complète est secrète : ne pas l’envoyer par chat, email ou capture d’écran.
-
-Les caractères spéciaux du mot de passe doivent être encodés en pourcentage **dans la partie mot de passe uniquement** : par exemple `@` devient `%40`, `:` devient `%3A`, `/` devient `%2F`, `#` devient `%23` et `%` devient `%25`. Ne pas encoder le reste de l’URL. Utiliser un outil local de confiance pour les autres caractères, jamais un site de conversion en ligne. Vérifier la connexion TLS avec le rôle et le pooler sur un environnement de test ; en cas d’erreur de certificat, ne pas désactiver sa vérification.
-
-### 5. Configurer Netlify et redéployer
-
-Dans **Netlify → votre site → Site configuration → Environment variables**, ajouter ou modifier :
-
-| Clé | Valeur et usage |
-|---|---|
-| `DATABASE_URL` | Chaîne PostgreSQL complète du rôle `rh_backend` préparée ci-dessus. **Secrète** ; disponible aux Functions côté serveur uniquement. |
-| `RH_ALLOWED_ORIGIN` | Origine HTTPS exacte du site Netlify, sans chemin ni `/` final, par exemple `https://votre-site.netlify.app`. |
-
-Pour `DATABASE_URL`, cocher **Contains secret values** si l’option est proposée et vérifier que le scope **Functions** est inclus. Renseigner la valeur dans le contexte **Production**. Si chaque contexte a une valeur distincte, ne pas copier la base de production dans les Deploy Previews ou Branch deploys : utiliser des bases et variables isolées, ou ne pas activer ces déploiements.
-
-Enregistrer les variables puis lancer un nouveau déploiement depuis **Deploys**. `netlify.toml` publie uniquement `public/` et déploie les fonctions `login`, `signup-ready` et `workspace`. Si le projet Supabase change, adapter l’URL et la clé publique dans `src/cloud.js` et `netlify/lib/supabase.mjs`, puis reconstruire.
-
-### 6. Inscrire et tester un compte RH
-
-Une fois la base, les fonctions et Netlify configurés :
-
-1. Ouvrir le site Netlify et choisir **Créer un compte**.
-2. Saisir un identifiant numérique unique, par exemple `1005`, une adresse email réelle et un mot de passe personnel d’au moins 12 caractères ; confirmer ce mot de passe.
-3. Si Supabase demande une confirmation, ouvrir le message reçu et suivre son lien, puis revenir sur le site.
-4. Se connecter avec **l’identifiant numérique et le mot de passe**, puis utiliser le bouton **Déconnexion**. L’utilisateur peut être consulté dans **Supabase → Authentication → Users**.
-5. Avec deux comptes de test, vérifier l’isolation, les imports, l’historique, les restaurations, les exports et les emails. Vérifier également RLS via les API Supabase, le refus d’un mauvais mot de passe, les limites de tentatives, Netlify `context.ip` et la connexion TLS. Les tests simulés ne prouvent pas le fonctionnement du service réel.
-
-**Inscription ouverte :** toute personne ayant accès au site peut choisir un identifiant RH libre et créer son espace ; la confirmation d’email ne prouve pas son appartenance au service RH. Évaluer et renforcer ce dispositif avant d’importer des données sensibles. Aucun mot de passe ni compte `1005` n’est fourni par défaut. L’interface ne propose pas encore la réinitialisation du mot de passe : prévoir une procédure sécurisée dans Supabase.
-
-### Données et comptes précédents
-
-Les anciens scripts `003_autoriser_utilisateur_rh.sql`, `scripts/create-rh-user.mjs` et `scripts/admin-auth.mjs` ne servent qu’à l’ancienne intégration Neon ; ils ne créent pas de compte Supabase. Les données Neon et les éventuels comptes existants ne sont ni supprimés ni importés par cette migration. Une reprise exige sauvegarde, vérification de l’identité des propriétaires et migration planifiée. Ne pas recopier de mot de passe dans SQL.
+`001`, `002`, `004`, `005` et les scripts Neon restent historiques ; `006` suffit pour une installation Supabase vierge ou pour migrer l’installation décrite ci-dessus. Une migration depuis Neon nécessite une reprise séparée avec vérification des propriétaires. Le script ne purge aucune donnée distante ni ancien historique Git.
 
 ## Dépannage
 
 | Symptôme | Points à vérifier |
 |---|---|
-| Inscription impossible | Projet Supabase dédié, signup email activé, scripts exécutés dans l’ordre, identifiant RH unique, mot de passe et configuration email. Les erreurs restent génériques. |
-| Connexion impossible | Identifiant et mot de passe, confirmation de l’email, état du compte, limites de tentatives et disponibilité Supabase. |
-| Service indisponible ou non configuré | `DATABASE_URL`, `RH_ALLOWED_ORIGIN`, déploiement Netlify, connexion TLS et droits du rôle `rh_backend`. `npm start` est un serveur statique sans fonctions. |
-| Conflit lors de la sauvegarde | Préserver/exporter les modifications locales, puis actualiser ; l’actualisation remplace l’espace local. |
-| Import trop volumineux | La limite est de 4 Mio de JSON par requête, distincte de la limite de 10 Mo par fichier. |
-| Déconnexion distante non confirmée | Fermer le navigateur et vérifier la session dans Supabase ; les données locales ont été effacées. |
+| Inscription impossible | Supabase Auth activé, confirmation et SMTP, politique de mot de passe, limites et erreurs dans les journaux. L’ancien trigger `voomnet_rh_on_signup` doit avoir été retiré par `006`. |
+| Connexion impossible | Adresse e-mail du compte existant, mot de passe, confirmation, limites Auth et disponibilité du service. |
+| Lien de récupération invalide | Lien expiré ou déjà utilisé, URL de redirection autorisée dans Supabase, configuration email et horloge ; demander un nouveau lien. |
+| Service de données indisponible | Migration `006` appliquée, Data API activée et schéma `public` exposé, URL et clé publishable du bon projet ; consulter les journaux Supabase. |
+| Compte non autorisé | Vérifier `rh_users.active` pour l’UUID concerné ; la migration ne réactive pas les comptes désactivés. |
+| Conflit de sauvegarde | Préserver/exporter les modifications locales, puis actualiser ; l’actualisation remplace l’espace local. |
+| Import trop volumineux | Limite de 4 Mio de JSON par requête, distincte des 10 Mo par fichier. |
 
 ## Développement
 
@@ -264,20 +191,16 @@ npm run build
 npm start
 ```
 
-Le serveur écoute sur le port `3000` par défaut (`PORT` permet de le modifier). Il n’exécute pas la fonction Netlify : il affiche l’écran de connexion, mais ne permet pas de valider une connexion réelle.
+Le serveur écoute sur le port `3000` par défaut (`PORT` permet de le modifier). La connexion et les données réelles nécessitent un projet Supabase configuré ; utilisez un projet de test séparé.
 
 | Chemin | Rôle |
 |---|---|
 | `src/app.html`, `src/styles.css`, `src/app.js` | Interface, styles, imports et stockage local. |
 | `src/core.js` | Règles métier, analyse des fichiers, scores et exports. |
 | `src/cloud.js` | Inscription et connexion Supabase, actions de l’espace personnel et historique des imports. |
-| `database/001_initial.sql` | Schéma PostgreSQL initial. |
-| `database/002_individual_imports.sql` | Migration additive pour les espaces individuels et historiques. |
-| `database/004_supabase.sql` | Sécurité Supabase, identifiants RH et inscription. |
-| `database/005_supabase_role_serveur.sql` | Droits limités du rôle PostgreSQL serveur. |
-| `netlify/functions/login.mjs` | Connexion par identifiant et limitation des tentatives. |
-| `netlify/functions/workspace.mjs` | API RH, autorisations, sauvegarde versionnée et audit. |
-| `netlify.toml` | Commande de build, dossier publié et fonctions Netlify. |
+| `database/006_supabase_email.sql` | Migration Supabase, protections et fonction d’espace privé. |
+| `database/001_initial.sql` à `005_supabase_role_serveur.sql` | Anciennes migrations historiques ; ne pas réappliquer après `006`. |
+| `netlify.toml` | Build et publication du site. |
 | `scripts/build.mjs` | Génération de `index.html` depuis les sources et les données fictives. |
 | `scripts/create-rh-user.mjs`, `scripts/admin-auth.mjs` | Outils historiques pour Neon Auth uniquement ; non utilisés avec Supabase. |
 | `tests/` | Tests métier, API et navigateurs. |
@@ -288,10 +211,10 @@ Lancer le serveur local (`npm start`) dans un premier terminal, puis dans un sec
 
 ```bash
 npm test                      # règles métier
-npm run test:cloud            # API et validation Supabase simulées
-npm run test:supabase         # migrations, contrôle RLS et connexion simulée
+npm run test:cloud            # migration et isolation simulées
+npm run test:supabase         # migration et contrôle de sécurité simulés
 npm run test:browser          # parcours navigateur et accessibilité
-node tests/cloud-browser.mjs  # connexion et API simulées
+node tests/cloud-browser.mjs  # parcours Auth et Data API simulés
 ```
 
 Les tests navigateur utilisent Playwright et le Chromium embarqué `@sparticuz/chromium`. `tests/browser.mjs` accepte `TEST_URL` et `CHROMIUM_PATH` ; ses réponses d’authentification simulées utilisent cependant l’origine `http://127.0.0.1:3000`. `tests/cloud-browser.mjs` attend également le serveur local sur cette adresse. Les tests simulent Supabase Auth, la base et les envois d’emails : ils **ne prouvent pas** qu’une configuration ou un envoi réel fonctionne.
