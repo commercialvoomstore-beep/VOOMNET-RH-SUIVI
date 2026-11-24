@@ -8,9 +8,9 @@
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/core.test.cjs",
     "test:browser": "node tests/browser.mjs",
-    "test:cloud": "node --test tests/cloud.test.mjs",
+    "test:cloud": "node --test tests/email-workspace.test.mjs",
     "test:admin": "node --test tests/admin-auth.test.mjs",
-    "test:supabase": "node --test tests/supabase.test.mjs"
+    "test:supabase": "node --test tests/email-workspace.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.0",
@@ -25,7 +25,6 @@
     "tailwindcss": "3.4.17"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.119.2",
-    "pg": "8.23.1"
+    "@supabase/supabase-js": "2.119.2"
   }
 }
