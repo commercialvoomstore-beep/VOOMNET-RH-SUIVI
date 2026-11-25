@@ -21,7 +21,9 @@ test('authentifie l’espace, limite les données transmises et envoie au nom du
   assert.equal(calls.length, 3); assert.match(calls[0].options.headers.Authorization, /^Bearer supa/);
   assert.equal(calls[2].url, 'https://graph.microsoft.com/v1.0/me/sendMail');
   assert.equal(calls[2].options.headers.Authorization, 'Bearer ms.token.sig');
-  assert.deepEqual(JSON.parse(calls[2].options.body), { message: { subject: 'Contrat', body: { contentType: 'Text', content: 'Bonjour' }, toRecipients: [{ emailAddress: { address: 'person@example.test' } }], ccRecipients: [{ emailAddress: { address: 'rh@example.test' } }] }, saveToSentItems: true });
+  const graph = JSON.parse(calls[2].options.body); assert.equal(graph.message.subject, 'Contrat');
+  assert.equal(graph.message.body.contentType, 'HTML'); assert.match(graph.message.body.content, /Bonjour/); assert.match(graph.message.body.content, /Suivi de votre contrat/);
+  assert.deepEqual(graph.message.toRecipients, [{ emailAddress: { address: 'person@example.test' } }]); assert.deepEqual(graph.message.ccRecipients, [{ emailAddress: { address: 'rh@example.test' } }]); assert.equal(graph.saveToSentItems, true);
 });
 test('refuse les origines, sessions, droits et messages invalides sans appeler Graph', async () => {
   let m = mock(); assert.equal((await m.handler(req(payload, { origin: 'https://bad.test' }))).status, 403); assert.equal(m.calls.length, 0);
@@ -37,4 +39,12 @@ test('les erreurs Microsoft ou réseau ne prétendent pas confirmer une remise',
   m = mock({ graphStatus: 429 }); assert.equal((await m.handler(req())).status, 429);
   m = mock({ graphStatus: 500 }); let uncertain = await m.handler(req()); assert.equal(uncertain.status, 504); assert.match((await uncertain.json()).error, /Résultat inconnu/);
   m = mock({ graphError: true }); const response = await m.handler(req()); assert.equal(response.status, 504); assert.match((await response.json()).error, /Résultat inconnu/);
+});
+
+test('le relais produit du HTML sûr et choisit le bon type sans accepter de HTML brut', async () => {
+  const { handler, calls } = mock();
+  const response = await handler(req({ ...payload, kind: 'prime', text: 'Bonjour <img src=x onerror=alert(1)> & Zoé' })); assert.equal(response.status, 202);
+  const html = JSON.parse(calls[2].options.body).message.body.content;
+  assert.match(html, /Votre prime trimestrielle/); assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt; &amp; Zoé')); assert.ok(!/<img\b/i.test(html));
+  const denied = mock(); assert.equal((await denied.handler(req({ ...payload, kind: 'autre' }))).status, 400); assert.equal(denied.calls.length, 0);
 });

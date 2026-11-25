@@ -39,6 +39,9 @@
   .sidebar-user small{@apply text-[8px] text-slate-500 block mt-1}
   .app-main{@apply min-h-screen flex flex-col lg:ml-[248px]}
   .topbar{@apply h-[72px] bg-white/95 border-b border-slate-200/80 px-5 sm:px-8 flex items-center justify-between gap-3 text-xs sticky top-0 z-20 backdrop-blur-sm}
+  .topbar-actions{min-width:0}
+  .session-indicator{@apply bg-blue-50 border-b border-blue-100 px-5 sm:px-8 py-2 text-[11px] text-slate-700;overflow-wrap:anywhere;min-width:0}
+  .session-indicator strong{@apply font-semibold text-slate-900}
   .main-content{@apply w-full max-w-[1660px] mx-auto px-4 sm:px-7 xl:px-8 pt-7 pb-6 flex-1}
   .app-footer{@apply max-w-[1660px] w-full mx-auto px-8 pb-6 pt-2 flex flex-wrap gap-2 justify-between text-[10px] text-slate-400}
   .btn{@apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-[11px] font-semibold transition-all border border-slate-200 bg-white text-slate-600 whitespace-nowrap hover:bg-slate-50 hover:border-slate-300 active:scale-[.98]}
@@ -157,7 +160,7 @@ dialog [class~="text-slate-400"],dialog [class~="text-slate-500"],dialog [class~
 .table-tab,.tab-count,.badge-gray{color:#475569}.badge-red{color:#b91c1c}.field::placeholder{color:#64748b}
 .app-footer [class~="text-slate-300"]{color:#475569}.main-content [class~="text-amber-600"]{color:#b45309}
 @media(min-width:1024px){.sidebar{transform:translateX(0)}}
-@media(max-width:639px){.kpi{padding:14px}.kpi-value{font-size:28px}.kpi-icon{width:26px;height:26px}.kpi-label{font-size:9px}.kpi-footer{font-size:8px}.table-tabs{gap:18px}.topbar{height:60px}.main-content{padding-top:20px}}
+@media(max-width:639px){.kpi{padding:14px}.kpi-value{font-size:28px}.kpi-icon{width:26px;height:26px}.kpi-label{font-size:9px}.kpi-footer{font-size:8px}.table-tabs{gap:18px}.topbar{height:auto;min-height:60px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}.topbar-actions{flex-wrap:wrap;gap:6px;justify-content:flex-end}.main-content{padding-top:20px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media print{
   @page{size:A4 landscape;margin:12mm}

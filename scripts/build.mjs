@@ -29,7 +29,7 @@ const demo = {
 const json = JSON.stringify(demo).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 const cloud = buildSync({ entryPoints: [resolve(root, 'src/cloud.js')], bundle: true, write: false, platform: 'browser', format: 'iife', target: ['es2022'], minify: true, legalComments: 'inline' }).outputFiles[0].text;
 let html = read('src/app.html');
-for (const [marker, content] of Object.entries({ CSS: `<style>\n${css}\n</style>`, LIBRARIES: `<script>\n${libraries}\n</script>`, DEMO: `<script>window.VOOMNET_DEMO=${json};</script>`, APP: `<script>\n${safeScript(read('src/core.js') + '\n' + read('src/app.js'))}\n</script>`, CLOUD: `<script>\n${safeScript(cloud)}\n</script>` })) {
+for (const [marker, content] of Object.entries({ CSS: `<style>\n${css}\n</style>`, LIBRARIES: `<script>\n${libraries}\n</script>`, DEMO: `<script>window.VOOMNET_DEMO=${json};</script>`, APP: `<script>\n${safeScript(read('src/core.js') + '\n' + read('src/email-design.js') + '\n' + read('src/app.js'))}\n</script>`, CLOUD: `<script>\n${safeScript(cloud)}\n</script>` })) {
   if (!html.includes(`<!-- INLINE:${marker} -->`)) throw new Error(`Missing marker: ${marker}`);
   html = html.replace(`<!-- INLINE:${marker} -->`, () => content);
 }

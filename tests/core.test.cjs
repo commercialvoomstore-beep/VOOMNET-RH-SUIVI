@@ -152,3 +152,13 @@ test('paramètres Outlook : compatibilité des anciens comptes et sélection du 
   assert.deepEqual(C.sanitizeSettings({ provider: 'outlook', outlook: { clientId, accountType: 'work', tenantId } }).outlook, { clientId, accountType: 'work', tenantId });
   assert.equal(C.sanitizeSettings({ outlook: { accountType: 'work', tenantId: 'https://example.com' } }).outlook.tenantId, '');
 });
+
+
+test('copie RH préremplie, personnalisable et compatible avec les anciens paramètres', () => {
+  const manager = 'manager@voomnettechnology.ci';
+  assert.equal(C.defaultSettings(TODAY).rhEmail, manager);
+  assert.equal(C.sanitizeSettings({ rhEmail: '' }, TODAY).rhEmail, manager);
+  assert.equal(C.sanitizeSettings({ rhEmail: 'other@example.test' }, TODAY).rhEmail, 'other@example.test');
+  assert.equal(C.sanitizeSettings({ rhEmail: '', rhEmailInitialized: true }, TODAY).rhEmail, '');
+  assert.equal(C.sanitizeSettings({ rhEmail: 'custom@example.test', rhEmailInitialized: true }, TODAY).rhEmail, 'custom@example.test');
+});
