@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { PublicClientApplication } from '@azure/msal-browser';
 
 // URL et clé publishable Supabase : publiques, sans privilège de service.
 const supabaseUrl = 'https://hibhvszfgldgxzcxhmou.supabase.co', publishableKey = 'sb_publishable__l9N851qkB3FG9kHItbPiQ_tpfTB7QY';
@@ -26,6 +27,7 @@ function setLoginBusy(busy, message = '') {
   loginMessage.textContent = message;
 }
 function lock(message = '') {
+  window.VoomnetOutlook?.disconnect();
   if (dialog.open) dialog.close();
   application.hidden = true; loginScreen.hidden = false; currentUser = null; version = null;
   setLoginBusy(false, message); passwordInput.value = ''; passwordInput.type = 'password';
@@ -39,6 +41,36 @@ async function getSession() {
   const { data, error } = await auth.getSession();
   return error || !data?.session?.user?.id || !data?.session?.access_token ? null : { user: data.session.user, token: data.session.access_token };
 }
+// Connexion déléguée Microsoft : jetons en mémoire uniquement, aucun secret client.
+let outlookState = null, outlookAttempt = 0;
+window.VoomnetOutlook = {
+  connected(clientId) { return Boolean(outlookState && outlookState.clientId === clientId && outlookState.owner === currentUser?.id && outlookState.expires > Date.now() + 30000); },
+  account(clientId) { return this.connected(clientId) ? outlookState.name : ''; },
+  disconnect() { outlookAttempt++; outlookState = null; },
+  async connect(clientId) {
+    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(clientId)) throw new Error('Renseignez un identifiant d’application Microsoft valide.');
+    const session = await getSession(); if (!session || session.user.id !== currentUser?.id) throw new Error('Reconnectez-vous à votre espace RH.');
+    const attempt = ++outlookAttempt; outlookState = null;
+    const msal = new PublicClientApplication({ auth: { clientId, authority: 'https://login.microsoftonline.com/consumers', redirectUri: location.origin + '/outlook-callback.html' }, cache: { cacheLocation: 'memoryStorage' } });
+    try {
+      await msal.initialize();
+      const result = await msal.loginPopup({ scopes: ['https://graph.microsoft.com/Mail.Send'], prompt: 'select_account' });
+      const fresh = await getSession();
+      if (attempt !== outlookAttempt || !fresh || fresh.user.id !== session.user.id || currentUser?.id !== session.user.id) throw new Error();
+      if (!result.accessToken || !result.expiresOn) throw new Error();
+      outlookState = { clientId, owner: session.user.id, token: result.accessToken, expires: result.expiresOn.getTime(), name: result.account?.username || 'Compte Microsoft' };
+      return outlookState.name;
+    } catch { if (attempt === outlookAttempt) outlookState = null; throw new Error('Connexion Outlook impossible ou annulée. Vérifiez le compte, la configuration Microsoft et les fenêtres pop-up.'); }
+  },
+  async send(email, clientId, signal) {
+    const session = await getSession();
+    if (!session || session.user.id !== currentUser?.id || !this.connected(clientId)) throw new Error('Session Outlook ou RH expirée. Reconnectez Outlook.');
+    let response;
+    try { response = await fetch('/.netlify/functions/outlook-send', { method: 'POST', headers: { Authorization: `Bearer ${session.token}`, 'Content-Type': 'application/json' }, credentials: 'omit', cache: 'no-store', signal, body: JSON.stringify({ microsoftToken: outlookState.token, to: email.to, cc: email.cc || '', subject: email.subject, text: email.body }) }); }
+    catch (error) { if (signal.aborted) throw error; throw new Error('Résultat inconnu : vérifiez les éléments envoyés Outlook avant de réessayer.'); }
+    if (!response.ok) { let data; try { data = await response.json(); } catch {} throw new Error(data?.error || 'Résultat inconnu : vérifiez les éléments envoyés Outlook avant de réessayer.'); }
+  }
+};
 async function api(token, method, body, query = {}) {
   if (body && new TextEncoder().encode(JSON.stringify(body)).length > 4 * 1024 * 1024) throw new Error('Données traitées trop volumineuses : 4 Mo de JSON maximum par envoi. Réduisez le fichier puis réessayez.');
   const action = method === 'PUT' ? 'save' : query.action || 'get';

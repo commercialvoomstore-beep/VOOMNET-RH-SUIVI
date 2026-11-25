@@ -9,7 +9,7 @@ const server = http.createServer((req, res) => {
   try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); } catch { res.writeHead(400); res.end('Bad request'); return; }
   if (pathname === '/favicon.ico') { res.writeHead(204); res.end(); return; }
   const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
-  const allowed = relative === 'index.html' || /^data\/LISTES-(EMPLOYEES|PERMISSIONS|POINTAGES)\.csv$/.test(relative);
+  const allowed = ['index.html', 'outlook-callback.html'].includes(relative) || /^data\/LISTES-(EMPLOYEES|PERMISSIONS|POINTAGES)\.csv$/.test(relative);
   const path = resolve(root, relative);
   if (!allowed || !path.startsWith(root + '/') || !existsSync(path)) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Page introuvable'); return; }
   if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405); res.end(); return; }
