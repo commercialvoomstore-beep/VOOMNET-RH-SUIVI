@@ -11,7 +11,7 @@
     "test:cloud": "node --test tests/email-workspace.test.mjs",
     "test:admin": "node --test tests/admin-auth.test.mjs",
     "test:supabase": "node --test tests/email-workspace.test.mjs",
-    "test:outlook": "node --test tests/outlook-relay.test.mjs tests/microsoft-auth.test.mjs"
+    "test:outlook": "node --test tests/outlook-relay.test.mjs tests/microsoft-auth.test.mjs tests/email-design.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.0",

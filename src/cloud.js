@@ -13,6 +13,7 @@ const form = document.querySelector('#login-form'), loginMessage = document.quer
 const loginSubmit = form.querySelector('[type="submit"]'), passwordInput = document.querySelector('#login-password');
 const signup = document.querySelector('#signup-form'), signupMessage = document.querySelector('#signup-message'), authSwitch = document.querySelector('#auth-switch');
 const forgot = document.querySelector('#forgot-form'), recovery = document.querySelector('#recovery-form'), forgotSwitch = document.querySelector('#forgot-switch');
+const sessionIndicator = document.querySelector('#session-indicator'), sessionEmail = document.querySelector('#session-email');
 const ownerKey = 'voomnet-rh:last-user', kinds = ['employees', 'absences', 'pointage'];
 let currentUser = null, version = null, pending = false, loginPending = false;
 const splash = document.querySelector('#splash'); application.inert = true;
@@ -30,7 +31,7 @@ function setLoginBusy(busy, message = '') {
 function lock(message = '') {
   window.VoomnetOutlook?.disconnect();
   if (dialog.open) dialog.close();
-  application.hidden = true; loginScreen.hidden = false; currentUser = null; version = null;
+  application.hidden = true; loginScreen.hidden = false; currentUser = null; version = null; sessionEmail.textContent = ''; sessionIndicator.hidden = true;
   setLoginBusy(false, message); passwordInput.value = ''; passwordInput.type = 'password';
   const toggle = document.querySelector('#login-toggle-password'); toggle.textContent = 'Afficher'; toggle.setAttribute('aria-label', 'Afficher le mot de passe'); toggle.setAttribute('aria-pressed', 'false');
 }
@@ -68,7 +69,7 @@ window.VoomnetOutlook = {
     const session = await getSession();
     if (!session || session.user.id !== currentUser?.id || !this.connected(clientId, accountType, tenantId)) throw new Error('Session Outlook ou RH expirée. Reconnectez Outlook.');
     let response;
-    try { response = await fetch('/.netlify/functions/outlook-send', { method: 'POST', headers: { Authorization: `Bearer ${session.token}`, 'Content-Type': 'application/json' }, credentials: 'omit', cache: 'no-store', signal, body: JSON.stringify({ microsoftToken: outlookState.token, to: email.to, cc: email.cc || '', subject: email.subject, text: email.body }) }); }
+    try { response = await fetch('/.netlify/functions/outlook-send', { method: 'POST', headers: { Authorization: `Bearer ${session.token}`, 'Content-Type': 'application/json' }, credentials: 'omit', cache: 'no-store', signal, body: JSON.stringify({ microsoftToken: outlookState.token, to: email.to, cc: email.cc || '', subject: email.subject, text: email.body, kind: email.kind || 'contract' }) }); }
     catch (error) { if (signal.aborted) throw error; throw new Error('Résultat inconnu : vérifiez les éléments envoyés Outlook avant de réessayer.'); }
     if (!response.ok) { let data; try { data = await response.json(); } catch {} throw new Error(data?.error || 'Résultat inconnu : vérifiez les éléments envoyés Outlook avant de réessayer.'); }
   }
@@ -100,9 +101,12 @@ async function authorize(session) {
   let data;
   try { data = await fetchWorkspace(session.token); }
   catch (error) { if (error.status === 403) throw new Error(`Compte non autorisé. Contactez l’administrateur RH et communiquez cet identifiant : ${session.user.id}`); throw error; }
-  sameOwner(session.user.id);
+  const latest = await getSession();
+  if (!latest || latest.user.id !== session.user.id) throw new Error('Session expirée ou compte modifié. Reconnectez-vous.');
+  sameOwner(latest.user.id);
   if (data.version > 0) workspace.load(data.snapshot);
-  currentUser = session.user; version = data.version;
+  currentUser = latest.user; version = data.version;
+  sessionEmail.textContent = typeof latest.user.email === 'string' && latest.user.email ? latest.user.email : 'Adresse e-mail indisponible'; sessionIndicator.hidden = false;
   loginScreen.hidden = true; application.hidden = false; loginMessage.textContent = ''; document.querySelector('#main-content').focus({ preventScroll: true });
 }
 async function request(method, body, query) {
@@ -191,7 +195,15 @@ document.querySelector('#recovery-back').addEventListener('click', async () => {
   catch { document.querySelector('#recovery-message').textContent = 'Déconnexion non confirmée. Fermez le navigateur.'; }
   finally { setLoginBusy(false, loginMessage.textContent); }
 });
-auth.onAuthStateChange(event => { if (event === 'PASSWORD_RECOVERY') { recovering = true; recoveryVerified = true; lock(); showMode('recovery'); } });
+auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') { recovering = true; recoveryVerified = true; lock(); showMode('recovery'); return; }
+  if (!currentUser) return;
+  if (event === 'SIGNED_OUT' || (session?.user?.id && session.user.id !== currentUser.id)) { lock('Session expirée ou compte modifié. Reconnectez-vous.'); return; }
+  if (session?.user?.id === currentUser.id && ['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) {
+    currentUser = session.user;
+    sessionEmail.textContent = typeof session.user.email === 'string' && session.user.email ? session.user.email : 'Adresse e-mail indisponible';
+  }
+});
 document.querySelector('#login-toggle-password').addEventListener('click', event => {
   const show = passwordInput.type === 'password'; passwordInput.type = show ? 'text' : 'password'; event.currentTarget.textContent = show ? 'Masquer' : 'Afficher';
   event.currentTarget.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'); event.currentTarget.setAttribute('aria-pressed', String(show));

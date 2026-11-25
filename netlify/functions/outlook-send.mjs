@@ -1,3 +1,5 @@
+import mailDesign from '../../src/email-design.js';
+
 // Le navigateur fournit deux jetons de session éphémères ; rien n'est stocké ici.
 const SUPABASE_URL = 'https://hibhvszfgldgxzcxhmou.supabase.co';
 const SUPABASE_KEY = 'sb_publishable__l9N851qkB3FG9kHItbPiQ_tpfTB7QY';
@@ -25,7 +27,7 @@ export function makeHandler({ fetcher = fetch, origin = process.env.RH_ALLOWED_O
     if (Number(request.headers.get('content-length') || 0) > MAX_BYTES) return json({ error: 'Message trop volumineux.' }, 413);
     let input;
     try { input = await readBody(request); } catch { return json({ error: 'Message invalide ou trop volumineux.' }, 400); }
-    if (!input || typeof input !== 'object' || Array.isArray(input) || typeof input.microsoftToken !== 'string' || !/^[A-Za-z0-9._-]{1,12000}$/.test(input.microsoftToken) || !validEmail(input.to) || (input.cc && !validEmail(input.cc)) || typeof input.subject !== 'string' || !input.subject.trim() || input.subject.length > 500 || /[\r\n]/.test(input.subject) || typeof input.text !== 'string' || !input.text.trim() || input.text.length > 15000) return json({ error: 'Message invalide.' }, 400);
+    if (!input || typeof input !== 'object' || Array.isArray(input) || (input.kind != null && !['contract', 'prime', 'summary'].includes(input.kind)) || typeof input.microsoftToken !== 'string' || !/^[A-Za-z0-9._-]{1,12000}$/.test(input.microsoftToken) || !validEmail(input.to) || (input.cc && !validEmail(input.cc)) || typeof input.subject !== 'string' || !input.subject.trim() || input.subject.length > 500 || /[\r\n]/.test(input.subject) || typeof input.text !== 'string' || !input.text.trim() || input.text.length > 15000) return json({ error: 'Message invalide.' }, 400);
     const supabaseHeaders = { apikey: SUPABASE_KEY, Authorization: `Bearer ${bearer[1]}` };
     try {
       const user = await fetcher(SUPABASE_URL + '/auth/v1/user', { headers: supabaseHeaders, signal: AbortSignal.timeout(10000) });
@@ -35,7 +37,7 @@ export function makeHandler({ fetcher = fetch, origin = process.env.RH_ALLOWED_O
       const access = await fetcher(SUPABASE_URL + '/rest/v1/rpc/voomnet_workspace', { method: 'POST', headers: { ...supabaseHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_action: 'get' }), signal: AbortSignal.timeout(10000) });
       if (!access.ok) return json({ error: 'Compte RH non autorisé ou service indisponible.' }, access.status === 401 ? 401 : 403);
     } catch { return json({ error: 'Vérification de la session indisponible.' }, 503); }
-    const message = { subject: input.subject, body: { contentType: 'Text', content: input.text }, toRecipients: [{ emailAddress: { address: input.to } }], ccRecipients: input.cc ? [{ emailAddress: { address: input.cc } }] : [] };
+    const message = { subject: input.subject, body: { contentType: 'HTML', content: mailDesign.renderEmailHtml(input.text, input.kind || 'contract') }, toRecipients: [{ emailAddress: { address: input.to } }], ccRecipients: input.cc ? [{ emailAddress: { address: input.cc } }] : [] };
     try {
       const response = await fetcher('https://graph.microsoft.com/v1.0/me/sendMail', { method: 'POST', headers: { Authorization: `Bearer ${input.microsoftToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message, saveToSentItems: true }), signal: AbortSignal.timeout(12000) });
       if (response.status === 202) return json({ accepted: true }, 202);
