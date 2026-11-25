@@ -1,4 +1,5 @@
 import mailDesign from '../../src/email-design.js';
+import logoBase64 from '../../src/email-logo.cjs';
 
 // Le navigateur fournit deux jetons de session éphémères ; rien n'est stocké ici.
 const SUPABASE_URL = 'https://hibhvszfgldgxzcxhmou.supabase.co';
@@ -37,7 +38,7 @@ export function makeHandler({ fetcher = fetch, origin = process.env.RH_ALLOWED_O
       const access = await fetcher(SUPABASE_URL + '/rest/v1/rpc/voomnet_workspace', { method: 'POST', headers: { ...supabaseHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_action: 'get' }), signal: AbortSignal.timeout(10000) });
       if (!access.ok) return json({ error: 'Compte RH non autorisé ou service indisponible.' }, access.status === 401 ? 401 : 403);
     } catch { return json({ error: 'Vérification de la session indisponible.' }, 503); }
-    const message = { subject: input.subject, body: { contentType: 'HTML', content: mailDesign.renderEmailHtml(input.text, input.kind || 'contract') }, toRecipients: [{ emailAddress: { address: input.to } }], ccRecipients: input.cc ? [{ emailAddress: { address: input.cc } }] : [] };
+    const message = { subject: input.subject, body: { contentType: 'HTML', content: mailDesign.renderEmailHtml(input.text, input.kind || 'contract', 'inline') }, toRecipients: [{ emailAddress: { address: input.to } }], ccRecipients: input.cc ? [{ emailAddress: { address: input.cc } }] : [], attachments: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'voomnet-logo.png', contentType: 'image/png', isInline: true, contentId: 'voomnet-logo', contentBytes: logoBase64 }] };
     try {
       const response = await fetcher('https://graph.microsoft.com/v1.0/me/sendMail', { method: 'POST', headers: { Authorization: `Bearer ${input.microsoftToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message, saveToSentItems: true }), signal: AbortSignal.timeout(12000) });
       if (response.status === 202) return json({ accepted: true }, 202);

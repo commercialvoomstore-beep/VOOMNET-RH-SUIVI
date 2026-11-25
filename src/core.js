@@ -15,6 +15,7 @@
     pointage: { date: ['Date'], mat: ['Matricule'], name: ['Nom'], service: ['Service'], status: ['Statut'], arrival: ['Arrivée'], departure: ['Départ'], late: ['Retard (min)'], minutes: ['Durée (min)'] },
     employees: { name: ['Utilisateur'], mat: ['Numéro 3CX'], email: ['Email'], role: ['Poste'], position: ['Poste occupé'], contractRaw: ['Status contrat'], start: ['DEBUT CONTRAT'], end: ['FIN CONTRAT'] }
   };
+  const DEFAULT_OUTLOOK = Object.freeze({ clientId: '5c2af644-73c6-4320-a6f6-cafd105e88d1', accountType: 'work', tenantId: 'ffe8f65f-6b4d-42cc-b8f8-b6a4febd98e4' });
   const DEFAULT_RH_EMAIL = 'manager@voomnettechnology.ci';
   const DEFAULT_SUBJECT = 'Fin de contrat à anticiper — {Nom} ({Matricule})';
   const DEFAULT_PRIME_SUBJECT = 'Information sur votre prime trimestrielle — {Periode}';
@@ -250,20 +251,26 @@
     return /\.(xlsx|xls)$/i.test(filename) ? parseWorkbook(buffer, filename, hint) : parseCSV(buffer, filename, hint);
   }
   function defaultSettings(today = todayISO()) {
-    return { ...periodPreset('calendar3', today), periodMode: 'calendar3', amount: 50000, crossCheck: true, alertThreshold: 30, rhEmail: DEFAULT_RH_EMAIL, rhEmailInitialized: true, provider: 'emailjs', emailjs: { serviceId: '', templateId: '', publicKey: '' }, webhook: { url: '' }, outlook: { clientId: '', accountType: 'personal', tenantId: '' }, subject: DEFAULT_SUBJECT, body: DEFAULT_BODY, primeSubject: DEFAULT_PRIME_SUBJECT, primeBody: DEFAULT_PRIME_BODY };
+    return { ...periodPreset('calendar3', today), periodMode: 'calendar3', amount: 50000, crossCheck: true, alertThreshold: 30, rhEmail: DEFAULT_RH_EMAIL, rhEmailInitialized: true, provider: 'outlook', mailConfigInitialized: true, emailjs: { serviceId: '', templateId: '', publicKey: '' }, webhook: { url: '' }, outlook: { ...DEFAULT_OUTLOOK }, subject: DEFAULT_SUBJECT, body: DEFAULT_BODY, primeSubject: DEFAULT_PRIME_SUBJECT, primeBody: DEFAULT_PRIME_BODY };
   }
   function sanitizeSettings(input, today = todayISO()) {
     const d = defaultSettings(today), s = input && typeof input === 'object' ? input : {};
     const mode = ['calendar3', 'rolling', 'quarter', 'custom'].includes(s.periodMode) ? s.periodMode : d.periodMode;
     const preset = periodPreset(mode === 'custom' ? 'calendar3' : mode, today);
     const start = validISO(s.start) ? s.start : preset.start, end = validISO(s.end) ? s.end : preset.end;
+    // Les anciennes configurations vides reçoivent les valeurs Voomnet ; les configurations existantes sont préservées.
+    const legacy = s.mailConfigInitialized !== true;
+    const noEmailjs = !s.emailjs?.serviceId && !s.emailjs?.templateId && !s.emailjs?.publicKey;
+    const noOutlook = !s.outlook?.clientId && !s.outlook?.tenantId;
+    const provider = ['emailjs', 'webhook', 'outlook'].includes(s.provider) ? (legacy && s.provider === 'emailjs' && noEmailjs && noOutlook ? d.provider : s.provider) : d.provider;
+    const useDefaultOutlook = legacy && noOutlook;
     return { periodMode: mode, start: start <= end ? start : preset.start, end: start <= end ? end : preset.end,
       amount: Number.isFinite(Number(s.amount)) && s.amount !== '' && s.amount != null ? Math.min(1000000000, Math.max(0, Math.round(Number(s.amount)))) : d.amount,
       crossCheck: typeof s.crossCheck === 'boolean' ? s.crossCheck : d.crossCheck,
       alertThreshold: [15, 30, 45, 60].includes(Number(s.alertThreshold)) ? Number(s.alertThreshold) : 30,
-      rhEmail: validEmail(s.rhEmail) ? s.rhEmail.trim() : s.rhEmailInitialized === true ? '' : DEFAULT_RH_EMAIL, rhEmailInitialized: true, provider: ['emailjs', 'webhook', 'outlook'].includes(s.provider) ? s.provider : 'emailjs',
+      rhEmail: validEmail(s.rhEmail) ? s.rhEmail.trim() : s.rhEmailInitialized === true ? '' : DEFAULT_RH_EMAIL, rhEmailInitialized: true, provider, mailConfigInitialized: true,
       emailjs: { serviceId: String(s.emailjs?.serviceId || '').slice(0, 200), templateId: String(s.emailjs?.templateId || '').slice(0, 200), publicKey: String(s.emailjs?.publicKey || '').slice(0, 500) },
-      webhook: { url: safeHTTPS(s.webhook?.url || '') }, outlook: { clientId: /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.outlook?.clientId || '') ? s.outlook.clientId : '', accountType: s.outlook?.accountType === 'work' ? 'work' : 'personal', tenantId: /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.outlook?.tenantId || '') ? s.outlook.tenantId : '' }, subject: typeof s.subject === 'string' ? s.subject.slice(0, 500) : d.subject, body: typeof s.body === 'string' ? s.body.slice(0, 15000) : d.body, primeSubject: typeof s.primeSubject === 'string' ? s.primeSubject.slice(0, 500) : d.primeSubject, primeBody: typeof s.primeBody === 'string' ? s.primeBody.slice(0, 15000) : d.primeBody };
+      webhook: { url: safeHTTPS(s.webhook?.url || '') }, outlook: useDefaultOutlook ? { ...DEFAULT_OUTLOOK } : { clientId: /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.outlook?.clientId || '') ? s.outlook.clientId : '', accountType: s.outlook?.accountType === 'work' ? 'work' : 'personal', tenantId: /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.outlook?.tenantId || '') ? s.outlook.tenantId : '' }, subject: typeof s.subject === 'string' ? s.subject.slice(0, 500) : d.subject, body: typeof s.body === 'string' ? s.body.slice(0, 15000) : d.body, primeSubject: typeof s.primeSubject === 'string' ? s.primeSubject.slice(0, 500) : d.primeSubject, primeBody: typeof s.primeBody === 'string' ? s.primeBody.slice(0, 15000) : d.primeBody };
   }
   function safeHTTPS(value) { try { const u = new URL(String(value).trim()); return u.protocol === 'https:' && !u.username && !u.password ? u.href : ''; } catch { return ''; } }
   function normalizeProfile(input, strict = false) {
@@ -360,5 +367,5 @@
   function reportRows(rows, settings, today) {
     return rows.map(r => ({ Matricule: r.mat, Collaborateur: r.name, Service: r.service, Actif: r.active ? 'Oui' : 'Non', 'Début période': formatDate(settings.start), 'Fin période': formatDate(settings.end), 'Demandes absence': r.declarations.length, 'Jours absent pointage': r.absentDays, 'Retards (min)': r.lateMinutes, 'Moyenne présence (min)': r.avgMinutes, 'Pointages renseignés': r.recordsCount, 'Durées renseignées': r.completedDurations, 'Motifs absences': r.declarations.map(d => d.type + ' : ' + d.reason).join(' | '), 'Statut RH absences': r.declarations.map(d => d.status).join(' | '), 'Contrôle pointage': settings.crossCheck ? 'Activé' : 'Désactivé', 'Prime': r.primeStatus, 'Motif décision prime': r.primeReason, 'Montant prime (FCFA)': r.eligible ? settings.amount : 0, 'Type contrat': r.type || 'À renseigner', 'Début contrat': r.start ? formatDate(r.start) : '', 'Fin contrat': r.end ? formatDate(r.end) : r.type === 'CDI' ? 'Indéterminée' : '', 'Jours restants': r.days, 'Alerte contrat': r.contractLevel, Email: r.email, 'Score assiduité /100': r.score, 'Données insuffisantes': r.insufficient ? 'Oui' : 'Non', 'Recommandation indicative': r.recommendation, 'Date édition': formatDate(today) }));
   }
-  G.VoomnetCore = { MAX_ROWS, MAX_FILE_BYTES, STORAGE_KEY, CONTRACT_TYPES, ABSENCE_HEADERS, POINTAGE_HEADERS, EMPLOYEE_HEADERS, LABELS, SCHEMAS, DEFAULT_RH_EMAIL, DEFAULT_SUBJECT, DEFAULT_BODY, DEFAULT_PRIME_SUBJECT, DEFAULT_PRIME_BODY, EMAIL_VARIABLES, fold, headerKey, esc, own, matricule, displayName, initials, validISO, parseDate, isIndefinite, dayNumber, diffDays, todayISO, shiftMonths, periodPreset, addDaysISO, formatDate, formatMoney, formatNumber, inRange, isAbsent, validEmail, parseNumber, normalizeService, normalizeContractType, columnMap, detectKind, normalizeTable, decodeBuffer, parseCSV, parseWorkbook, prepareImport, defaultSettings, sanitizeSettings, safeHTTPS, normalizeProfile, parseProfileExport, buildUniverse, attendanceMetrics, evaluateEmployee, evaluateAll, aggregate, emailVariables, renderTemplate, unknownVariables, emailFor, mailtoHref, campaignPayload, safeCSVCell, reportRows };
+  G.VoomnetCore = { MAX_ROWS, MAX_FILE_BYTES, STORAGE_KEY, CONTRACT_TYPES, ABSENCE_HEADERS, POINTAGE_HEADERS, EMPLOYEE_HEADERS, LABELS, SCHEMAS, DEFAULT_OUTLOOK, DEFAULT_RH_EMAIL, DEFAULT_SUBJECT, DEFAULT_BODY, DEFAULT_PRIME_SUBJECT, DEFAULT_PRIME_BODY, EMAIL_VARIABLES, fold, headerKey, esc, own, matricule, displayName, initials, validISO, parseDate, isIndefinite, dayNumber, diffDays, todayISO, shiftMonths, periodPreset, addDaysISO, formatDate, formatMoney, formatNumber, inRange, isAbsent, validEmail, parseNumber, normalizeService, normalizeContractType, columnMap, detectKind, normalizeTable, decodeBuffer, parseCSV, parseWorkbook, prepareImport, defaultSettings, sanitizeSettings, safeHTTPS, normalizeProfile, parseProfileExport, buildUniverse, attendanceMetrics, evaluateEmployee, evaluateAll, aggregate, emailVariables, renderTemplate, unknownVariables, emailFor, mailtoHref, campaignPayload, safeCSVCell, reportRows };
 })();

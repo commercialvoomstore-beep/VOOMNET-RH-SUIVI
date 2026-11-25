@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build && mkdir -p public && cp index.html outlook-callback.html public/"
+  command = "npm run build && mkdir -p public && cp index.html outlook-callback.html assets/voomnet-logo.png public/"
   publish = "public"
   functions = "netlify/functions"
 

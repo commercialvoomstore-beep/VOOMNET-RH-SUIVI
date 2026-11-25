@@ -121,7 +121,7 @@ test('emails : variables, mailto encodé, copie RH, confidentialité et HTML éc
   assert.equal(C.campaignPayload({ ...email, body: '<script>alert(1)</script>' }, row, s).html, '&lt;script&gt;alert(1)&lt;/script&gt;');
 });
 test('paramètres bornés et URL de relais HTTPS sans identifiants', () => {
-  const s = C.sanitizeSettings({ amount: -5, alertThreshold: 999, provider: 'bad', start: '2026-12-01', end: '2026-01-01' }, TODAY); assert.equal(s.amount, 0); assert.equal(s.alertThreshold, 30); assert.equal(s.provider, 'emailjs'); assert.equal(s.start, '2026-09-01');
+  const s = C.sanitizeSettings({ amount: -5, alertThreshold: 999, provider: 'bad', start: '2026-12-01', end: '2026-01-01' }, TODAY); assert.equal(s.amount, 0); assert.equal(s.alertThreshold, 30); assert.equal(s.provider, 'outlook'); assert.equal(s.start, '2026-09-01');
   assert.equal(C.safeHTTPS('http://example.com'), ''); assert.equal(C.safeHTTPS('javascript:alert(1)'), ''); assert.equal(C.safeHTTPS('https://user:secret@example.com'), ''); assert.equal(C.safeHTTPS('https://example.com/hook'), 'https://example.com/hook');
 });
 test('sauvegarde JSON versionnée, validation et clés prototype sans pollution', () => {
@@ -161,4 +161,18 @@ test('copie RH préremplie, personnalisable et compatible avec les anciens param
   assert.equal(C.sanitizeSettings({ rhEmail: 'other@example.test' }, TODAY).rhEmail, 'other@example.test');
   assert.equal(C.sanitizeSettings({ rhEmail: '', rhEmailInitialized: true }, TODAY).rhEmail, '');
   assert.equal(C.sanitizeSettings({ rhEmail: 'custom@example.test', rhEmailInitialized: true }, TODAY).rhEmail, 'custom@example.test');
+});
+
+
+test('configuration Microsoft 365 Voomnet préremplie et migration non destructive', () => {
+  const expected = { clientId: '5c2af644-73c6-4320-a6f6-cafd105e88d1', accountType: 'work', tenantId: 'ffe8f65f-6b4d-42cc-b8f8-b6a4febd98e4' };
+  assert.equal(C.defaultSettings(TODAY).provider, 'outlook'); assert.deepEqual(C.defaultSettings(TODAY).outlook, expected);
+  const old = C.sanitizeSettings({ provider: 'emailjs', emailjs: { serviceId: '', templateId: '', publicKey: '' }, outlook: { clientId: '', accountType: 'personal', tenantId: '' }, amount: 123, rhEmail: 'existing@example.test' }, TODAY);
+  assert.equal(old.provider, 'outlook'); assert.deepEqual(old.outlook, expected); assert.equal(old.amount, 123); assert.equal(old.rhEmail, 'existing@example.test');
+  const configured = C.sanitizeSettings({ provider: 'emailjs', emailjs: { serviceId: 'my-service', templateId: 'my-template', publicKey: 'my-key' } }, TODAY);
+  assert.equal(configured.provider, 'emailjs'); assert.equal(configured.emailjs.serviceId, 'my-service');
+  assert.equal(C.sanitizeSettings({ provider: 'webhook', webhook: { url: 'https://example.test/send' } }).provider, 'webhook');
+  assert.equal(C.sanitizeSettings({ provider: 'emailjs', mailConfigInitialized: true }).provider, 'emailjs');
+  assert.deepEqual(C.sanitizeSettings({ provider: 'outlook', mailConfigInitialized: true, outlook: { clientId: '', accountType: 'personal', tenantId: '' } }).outlook, { clientId: '', accountType: 'personal', tenantId: '' });
+  assert.deepEqual(C.sanitizeSettings(old, TODAY), old);
 });

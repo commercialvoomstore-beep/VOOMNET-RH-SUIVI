@@ -23,6 +23,7 @@ test('authentifie l’espace, limite les données transmises et envoie au nom du
   assert.equal(calls[2].options.headers.Authorization, 'Bearer ms.token.sig');
   const graph = JSON.parse(calls[2].options.body); assert.equal(graph.message.subject, 'Contrat');
   assert.equal(graph.message.body.contentType, 'HTML'); assert.match(graph.message.body.content, /Bonjour/); assert.match(graph.message.body.content, /Suivi de votre contrat/);
+  assert.match(graph.message.body.content, /src="cid:voomnet-logo"/); assert.equal(graph.message.attachments.length, 1); assert.equal(graph.message.attachments[0]['@odata.type'], '#microsoft.graph.fileAttachment'); assert.equal(graph.message.attachments[0].contentId, 'voomnet-logo'); assert.equal(graph.message.attachments[0].isInline, true); assert.equal(graph.message.attachments[0].contentType, 'image/png'); assert.deepEqual(Buffer.from(graph.message.attachments[0].contentBytes, 'base64').subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   assert.deepEqual(graph.message.toRecipients, [{ emailAddress: { address: 'person@example.test' } }]); assert.deepEqual(graph.message.ccRecipients, [{ emailAddress: { address: 'rh@example.test' } }]); assert.equal(graph.saveToSentItems, true);
 });
 test('refuse les origines, sessions, droits et messages invalides sans appeler Graph', async () => {
@@ -45,6 +46,6 @@ test('le relais produit du HTML sûr et choisit le bon type sans accepter de HTM
   const { handler, calls } = mock();
   const response = await handler(req({ ...payload, kind: 'prime', text: 'Bonjour <img src=x onerror=alert(1)> & Zoé' })); assert.equal(response.status, 202);
   const html = JSON.parse(calls[2].options.body).message.body.content;
-  assert.match(html, /Votre prime trimestrielle/); assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt; &amp; Zoé')); assert.ok(!/<img\b/i.test(html));
+  assert.match(html, /Votre prime trimestrielle/); assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt; &amp; Zoé')); assert.equal((html.match(/<img\b/gi) || []).length, 1);
   const denied = mock(); assert.equal((await denied.handler(req({ ...payload, kind: 'autre' }))).status, 400); assert.equal(denied.calls.length, 0);
 });
