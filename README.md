@@ -1,6 +1,6 @@
 # Voomnet RH — Gestion des Primes Trimestrielles & Contrats
 
-Application d’aide à la décision pour le suivi des **primes trimestrielles**, des **contrats** et des **alertes RH**. L’interface est livrée en un fichier [`index.html`](index.html), avec Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et une démonstration fictive intégrés : aucun CDN n’est requis.
+Application d’aide à la décision pour le suivi des **primes trimestrielles**, des **contrats** et des **alertes RH**. L’interface est générée dans [`index.html`](index.html), avec Tailwind CSS, Lucide, PapaParse, SheetJS, la police Inter et une démonstration fictive intégrés : aucun CDN n’est requis. Le déploiement comprend aussi la page de retour Microsoft, le logo et une fonction Netlify pour les envois Outlook.
 
 **L’application ne fonctionne pas de manière autonome hors ligne** : l’accès à l’interface nécessite Supabase Auth, l’API de données Supabase, PostgreSQL et une connexion internet. La connexion réelle, la base et les comptes RH doivent être configurés et vérifiés avant utilisation.
 
@@ -18,8 +18,8 @@ Application d’aide à la décision pour le suivi des **primes trimestrielles**
 ## Démarrage
 
 - **Usage en ligne** : ouvrir le site Netlify configuré, puis se connecter avec un compte personnel confirmé. Le fichier `index.html` seul, sans API et connexion, affiche la page de connexion mais ne débloque pas l’application.
-- **Aperçu local** : `npm install` puis `npm start` (port `3000`, configurable via `PORT`). Ce serveur statique permet aussi de tester la connexion si Supabase est configuré pour son origine et si la migration est appliquée ; privilégier un projet de test isolé.
-- **Régénérer le fichier autonome** : `npm run build`.
+- **Aperçu local** : `npm ci`, `npm run build`, puis `npm start` (port `3000`, configurable via `PORT`). Le serveur est statique : il ne lance pas la fonction d’envoi Netlify. Une connexion réelle requiert un projet Supabase configuré pour cette origine ; privilégier un projet de test isolé.
+- **Après modification des sources** : relancer `npm run build` pour régénérer `index.html`.
 - **Tests** : `npm test` (moteur de règles) et `npm run test:browser` (nécessite `npm start` dans un autre terminal).
 
 Les sources sont dans `src/`, les fichiers **fictifs** de démonstration dans `data/`, et le fichier HTML généré à la racine. Pour commencer en tant que RH :
@@ -117,6 +117,16 @@ Ces seuils sont des conventions d’aide à la décision, pas des règles légal
 
 ## Emails et alertes
 
+### Parcours rapide pour un envoi Outlook
+
+1. Connectez-vous à votre espace RH et vérifiez que les imports et la période sont à jour. L’adresse RH affichée dans la barre supérieure est celle de l’espace Supabase : elle peut être différente de la boîte Microsoft d’envoi.
+2. Dans **Paramètres → Connexion d’envoi**, vérifiez que **Outlook / Microsoft 365** et **Compte professionnel Microsoft 365** sont sélectionnés. Les identifiants publics de l’application Voomnet sont préremplis pour les nouvelles configurations et les anciennes configurations vides ; les configurations personnalisées existantes restent utilisées.
+3. Cliquez sur **Connecter Outlook** et choisissez une boîte professionnelle autorisée. Vérifiez l’adresse « Connecté : … » : les messages partiront de cette boîte. La connexion Outlook est temporaire ; reconnectez-vous après fermeture ou déconnexion. Aucun mot de passe Microsoft n’est saisi dans l’application.
+4. Vérifiez l’adresse de copie RH dans les paramètres. Elle est préremplie avec `manager@voomnettechnology.ci` et peut être modifiée ou retirée ; une adresse personnalisée existante est conservée. La copie reçoit le contenu du message individuel, y compris les éventuelles données d’assiduité.
+5. Dans **Emails**, choisissez la campagne, contrôlez les destinataires et l’aperçu, puis confirmez l’envoi. Pour Outlook, un récapitulatif distinct est envoyé à l’adresse RH si elle est renseignée et si la campagne n’a pas été interrompue. Vérifiez les éléments envoyés en cas de résultat inconnu avant de réessayer.
+
+### Fonctionnement et limites
+
 - Deux campagnes manuelles : **fins de contrat** et **primes disponibles**, chacune avec son modèle modifiable et un aperçu individuel. La prime est annoncée sous réserve de validation RH. Les imports d’absences et, si le contrôle croisé est actif, de pointage sont nécessaires avant un envoi de primes. Leur présence ne garantit pas leur exhaustivité : vérifiez la période, les données et les destinataires.
 - Avant chaque envoi, le RH sélectionne les destinataires et confirme explicitement. La copie RH est préremplie avec `manager@voomnettechnology.ci` ; elle reste modifiable ou supprimable dans les paramètres. Les adresses personnalisées existantes sont conservées ; une ancienne valeur vide sans marqueur de choix est initialisée à cette adresse. Vérifier la copie affichée avant confirmation : elle reçoit le même message et ses éventuelles données d’assiduité. Le canal Outlook ajoute une copie individuelle à l’adresse RH configurée et, si elle est renseignée, envoie également un récapitulatif séparé des nombres de requêtes acceptées et non confirmées. Aucun récapitulatif n’est lancé après une interruption. Les canaux EmailJS et webhook conservent leur fonctionnement antérieur : pas de récapitulatif séparé automatique.
 - Les messages Outlook disposent d’une présentation HTML Voomnet avec le logo intégré au message (pièce jointe inline CID) ; le texte édité est échappé et peut être vérifié dans l’aperçu. Le rendu varie selon la messagerie. `mailto:` reste en texte brut ; pour EmailJS, le modèle doit utiliser la variable HTML `message_html` (dans le contenu HTML, avec la syntaxe non échappée `{{{message_html}}}`) afin d’afficher cette présentation. Pour EmailJS et les webhooks, le logo est chargé depuis `https://rh-suivi.netlify.app/voomnet-logo.png` : certains clients bloquent les images externes et affichent alors le texte alternatif. Un webhook externe reçoit `text` et `html` et doit choisir d’envoyer le HTML. Les modèles et textes déjà personnalisés sont conservés.
@@ -131,7 +141,7 @@ Le relais Netlify prend en charge les **comptes Microsoft personnels** et les **
 
 1. Dans [Microsoft Entra / App registrations](https://entra.microsoft.com/), créer ou utiliser une application dont les comptes autorisés correspondent à la boîte choisie. Pour une boîte professionnelle de votre entreprise, **Supported accounts → Accounts in this organizational directory only** limite les connexions à cet annuaire ; choisir une option plus large incluant les comptes personnels seulement si nécessaire. Changer ce réglage peut empêcher la connexion d’autres utilisateurs déjà autorisés : vérifier les usages existants. Pour les comptes personnels, Microsoft exige `api.requestedAccessTokenVersion: 2` dans le manifeste. L’accès à l’enregistrement peut nécessiter des droits Microsoft adaptés. Dans **Overview**, noter l’**Application (client) ID** et, pour Microsoft 365 professionnel, le **Directory (tenant) ID**. Ces identifiants sont publics ; ne pas créer ni saisir de secret client pour ce flux navigateur.
 2. Dans **Authentication**, ajouter la plateforme **Single-page application** (pas Web) avec l’URI de redirection exacte `https://rh-suivi.netlify.app/outlook-callback.html` ou l’URL correspondante de votre site. Autoriser les fenêtres pop-up côté navigateur. Dans **API permissions → Microsoft Graph → Delegated permissions**, ajouter **Mail.Send**, puis accepter le consentement lors de la connexion ; en entreprise, la politique du tenant peut nécessiter l’intervention d’un administrateur. Cette permission permet d’envoyer au nom du compte connecté ; ne pas accorder de permission d’application générale. Voir la [documentation Microsoft](https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0).
-3. Dans **Netlify → Site configuration → Environment variables**, définir `RH_ALLOWED_ORIGIN` sur l’origine HTTPS exacte, par exemple `https://rh-suivi.netlify.app` sans slash final, pour le contexte Production et les Functions, puis redéployer. Le build publie `outlook-callback.html` et la fonction `outlook-send`. Les prévisualisations utilisent une origine différente : configurez-les séparément avec un projet de test et une URI de redirection correspondante, ou laissez le relais désactivé. Aucune clé service-role ou mot de passe Microsoft n’est nécessaire.
+3. Dans **Netlify → Site configuration → Environment variables**, définir `RH_ALLOWED_ORIGIN` sur l’origine HTTPS exacte, par exemple `https://rh-suivi.netlify.app` sans slash final, pour le contexte Production et les Functions, puis redéployer. Le build publie `index.html`, `outlook-callback.html`, `voomnet-logo.png` et la fonction `outlook-send`. Les prévisualisations utilisent une origine différente : configurez-les séparément avec un projet de test et une URI de redirection correspondante, ou laissez le relais désactivé. Aucune clé service-role ou mot de passe Microsoft n’est nécessaire.
 4. Dans **Paramètres → Connexion d’envoi**, Outlook professionnel est préconfiguré avec les identifiants publics Voomnet. Les anciennes configurations vides sont initialisées, mais les prestataires et identifiants déjà configurés restent inchangés ; ils peuvent toujours être modifiés et enregistrés. Cliquer **Connecter Outlook**, choisir la boîte professionnelle d’envoi et accepter les autorisations sur le site Microsoft. Vérifier l’adresse affichée : elle détermine l’expéditeur. L’adresse du compte et sa connexion ne sont pas figées ; la connexion Outlook est temporaire et doit être renouvelée après fermeture ou déconnexion. Enregistrer l’adresse RH dans les règles et sauvegarder les paramètres via **Espace RH en ligne** si nécessaire.
 5. Pour un essai, utiliser des données fictives et un destinataire vous appartenant. Vérifier aperçu, adresse, copie RH et récapitulatif avant toute campagne réelle. Activer aussi des protections et limites d’usage côté Netlify et Microsoft ; le relais ne fournit pas de quota distribué ni d’idempotence. La validation du jeton Supabase et l’accès à l’espace actif sont vérifiés à chaque requête, puis Microsoft vérifie son propre jeton. La sélection des primes est une protection de l’interface, pas une règle imposée par le relais : une personne possédant ses jetons valides peut appeler le relais pour envoyer un message au nom de sa propre boîte.
 
@@ -166,7 +176,7 @@ Les comptes Supabase existants gardent leur UUID et leur espace : utilisez leur 
 
 1. Dans le projet Supabase dédié, activer l’inscription par e-mail et mot de passe, la confirmation d’e-mail et l’envoi des messages ; configurer SMTP si nécessaire pour les usages réels. Imposer un minimum de 12 caractères côté Supabase : le navigateur ne suffit pas. Activer des limites adaptées contre les abus et désactiver les fournisseurs Auth inutilisés, y compris les connexions anonymes.
 2. Dans **Authentication → URL Configuration**, définir la Site URL HTTPS de production et autoriser les URLs de redirection du site, y compris `https://rh-suivi.netlify.app/` et `https://rh-suivi.netlify.app/?recovery=1` (ou celles de votre site). Adapter aussi les URLs des environnements de test séparés. Vérifier les modèles d’email et la réception réelle des liens de confirmation et de réinitialisation.
-3. La Data API doit être activée et exposer le schéma `public` pour la fonction `voomnet_workspace`. La clé publishable et l’URL déjà présentes dans `src/cloud.js` sont publiques. Ne jamais intégrer la clé secrète/service-role ou un mot de passe dans le client, Git ou le chat. Pour un autre projet, modifier l’URL et la clé publishable dans `src/cloud.js`, puis reconstruire.
+3. La Data API doit être activée et exposer le schéma `public` pour la fonction `voomnet_workspace`. La clé publishable et l’URL configurées sont publiques. Ne jamais intégrer la clé secrète/service-role ou un mot de passe dans le client, Git ou le chat. Pour un autre projet, adapter l’URL et la clé publishable dans **`src/cloud.js` et `netlify/functions/outlook-send.mjs`** afin que l’application et le relais vérifient le même projet, puis reconstruire et redéployer.
 
 ### 2. Migrer la base et déployer
 
@@ -191,6 +201,10 @@ Les comptes Supabase existants gardent leur UUID et leur espace : utilisez leur 
 | Compte non autorisé | Vérifier `rh_users.active` pour l’UUID concerné ; la migration ne réactive pas les comptes désactivés. |
 | Conflit de sauvegarde | Préserver/exporter les modifications locales, puis actualiser ; l’actualisation remplace l’espace local. |
 | Import trop volumineux | Limite de 4 Mio de JSON par requête, distincte des 10 Mo par fichier. |
+| Microsoft indique `unauthorized_client` ou refuse un compte personnel | Choisir **Compte professionnel Microsoft 365**, enregistrer les paramètres si nécessaire, puis sélectionner une boîte de l’organisation autorisée par l’application Entra. Vérifier également le tenant, le client ID, la permission `Mail.Send` et l’URI de retour SPA. |
+| Outlook ne se connecte plus après fermeture ou déconnexion | La connexion Outlook est temporaire. Se reconnecter à l’espace RH, puis cliquer sur **Connecter Outlook** ; autoriser les fenêtres pop-up. |
+| Envoi non confirmé ou résultat inconnu | Vérifier les **Éléments envoyés** du compte Microsoft avant de relancer ; une acceptation par l’API ne garantit pas la remise. |
+| Logo absent dans un email | Avec Outlook, le logo est intégré en pièce jointe inline CID ; le rendu dépend de la messagerie du destinataire. Avec EmailJS ou un webhook, vérifier la publication de `voomnet-logo.png` et l’autorisation d’affichage des images externes. `mailto:` utilise du texte brut sans logo. |
 
 ## Développement
 
@@ -227,13 +241,14 @@ Lancer le serveur local (`npm start`) dans un premier terminal, puis dans un sec
 
 ```bash
 npm test                      # règles métier
-npm run test:cloud            # migration et isolation simulées
-npm run test:supabase         # migration et contrôle de sécurité simulés
-npm run test:outlook          # relais Outlook, avec services simulés
+npm run test:supabase         # migration et isolation simulées (alias : test:cloud)
+npm run test:outlook          # relais Outlook, autorité Microsoft et gabarit email simulés
 npm run test:browser          # parcours navigateur et accessibilité
 node tests/cloud-browser.mjs  # parcours Auth et Data API simulés
 ```
 
 Les tests navigateur utilisent Playwright et le Chromium embarqué `@sparticuz/chromium`. `tests/browser.mjs` accepte `TEST_URL` et `CHROMIUM_PATH` ; ses réponses d’authentification simulées utilisent cependant l’origine `http://127.0.0.1:3000`. `tests/cloud-browser.mjs` attend également le serveur local sur cette adresse. Les tests simulent Supabase Auth, la base et les envois d’emails : ils **ne prouvent pas** qu’une configuration ou un envoi réel fonctionne.
+
+Le logo se trouve dans `assets/voomnet-logo.png` pour la publication et dans `src/email-logo.cjs` sous forme encodée pour les pièces jointes Outlook. Si le logo est remplacé, mettre à jour les deux versions ; le test `npm run test:outlook` vérifie leur correspondance. Le fichier PNG est publié sans authentification ; les clients EmailJS/webhook utilisent l’URL de production mentionnée plus haut.
 
 SheetJS est embarqué via la distribution npm `@e965/xlsx` 0.20.3, avec PapaParse 5.5.3, Lucide 0.468.0 et Inter.
