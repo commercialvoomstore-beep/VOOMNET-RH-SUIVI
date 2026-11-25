@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { PublicClientApplication } from '@azure/msal-browser';
+import { microsoftAuthority, microsoftConnectionKey } from './microsoft-auth.mjs';
 
 // URL et clé publishable Supabase : publiques, sans privilège de service.
 const supabaseUrl = 'https://hibhvszfgldgxzcxhmou.supabase.co', publishableKey = 'sb_publishable__l9N851qkB3FG9kHItbPiQ_tpfTB7QY';
@@ -44,27 +45,28 @@ async function getSession() {
 // Connexion déléguée Microsoft : jetons en mémoire uniquement, aucun secret client.
 let outlookState = null, outlookAttempt = 0;
 window.VoomnetOutlook = {
-  connected(clientId) { return Boolean(outlookState && outlookState.clientId === clientId && outlookState.owner === currentUser?.id && outlookState.expires > Date.now() + 30000); },
-  account(clientId) { return this.connected(clientId) ? outlookState.name : ''; },
+  connected(clientId, accountType, tenantId) { try { return Boolean(outlookState && outlookState.key === microsoftConnectionKey(clientId, accountType, tenantId) && outlookState.owner === currentUser?.id && outlookState.expires > Date.now() + 30000); } catch { return false; } },
+  account(clientId, accountType, tenantId) { return this.connected(clientId, accountType, tenantId) ? outlookState.name : ''; },
   disconnect() { outlookAttempt++; outlookState = null; },
-  async connect(clientId) {
-    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(clientId)) throw new Error('Renseignez un identifiant d’application Microsoft valide.');
+  async connect(clientId, accountType, tenantId) {
+    const key = microsoftConnectionKey(clientId, accountType, tenantId);
+    const authority = microsoftAuthority(accountType, tenantId);
     const session = await getSession(); if (!session || session.user.id !== currentUser?.id) throw new Error('Reconnectez-vous à votre espace RH.');
     const attempt = ++outlookAttempt; outlookState = null;
-    const msal = new PublicClientApplication({ auth: { clientId, authority: 'https://login.microsoftonline.com/consumers', redirectUri: location.origin + '/outlook-callback.html' }, cache: { cacheLocation: 'memoryStorage' } });
+    const msal = new PublicClientApplication({ auth: { clientId, authority, redirectUri: location.origin + '/outlook-callback.html' }, cache: { cacheLocation: 'memoryStorage' } });
     try {
       await msal.initialize();
       const result = await msal.loginPopup({ scopes: ['https://graph.microsoft.com/Mail.Send'], prompt: 'select_account' });
       const fresh = await getSession();
       if (attempt !== outlookAttempt || !fresh || fresh.user.id !== session.user.id || currentUser?.id !== session.user.id) throw new Error();
       if (!result.accessToken || !result.expiresOn) throw new Error();
-      outlookState = { clientId, owner: session.user.id, token: result.accessToken, expires: result.expiresOn.getTime(), name: result.account?.username || 'Compte Microsoft' };
+      outlookState = { key, owner: session.user.id, token: result.accessToken, expires: result.expiresOn.getTime(), name: result.account?.username || 'Compte Microsoft' };
       return outlookState.name;
     } catch { if (attempt === outlookAttempt) outlookState = null; throw new Error('Connexion Outlook impossible ou annulée. Vérifiez le compte, la configuration Microsoft et les fenêtres pop-up.'); }
   },
-  async send(email, clientId, signal) {
+  async send(email, clientId, accountType, tenantId, signal) {
     const session = await getSession();
-    if (!session || session.user.id !== currentUser?.id || !this.connected(clientId)) throw new Error('Session Outlook ou RH expirée. Reconnectez Outlook.');
+    if (!session || session.user.id !== currentUser?.id || !this.connected(clientId, accountType, tenantId)) throw new Error('Session Outlook ou RH expirée. Reconnectez Outlook.');
     let response;
     try { response = await fetch('/.netlify/functions/outlook-send', { method: 'POST', headers: { Authorization: `Bearer ${session.token}`, 'Content-Type': 'application/json' }, credentials: 'omit', cache: 'no-store', signal, body: JSON.stringify({ microsoftToken: outlookState.token, to: email.to, cc: email.cc || '', subject: email.subject, text: email.body }) }); }
     catch (error) { if (signal.aborted) throw error; throw new Error('Résultat inconnu : vérifiez les éléments envoyés Outlook avant de réessayer.'); }

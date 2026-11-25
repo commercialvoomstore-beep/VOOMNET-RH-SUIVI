@@ -249,7 +249,7 @@
     return /\.(xlsx|xls)$/i.test(filename) ? parseWorkbook(buffer, filename, hint) : parseCSV(buffer, filename, hint);
   }
   function defaultSettings(today = todayISO()) {
-    return { ...periodPreset('calendar3', today), periodMode: 'calendar3', amount: 50000, crossCheck: true, alertThreshold: 30, rhEmail: '', provider: 'emailjs', emailjs: { serviceId: '', templateId: '', publicKey: '' }, webhook: { url: '' }, outlook: { clientId: '' }, subject: DEFAULT_SUBJECT, body: DEFAULT_BODY, primeSubject: DEFAULT_PRIME_SUBJECT, primeBody: DEFAULT_PRIME_BODY };
+    return { ...periodPreset('calendar3', today), periodMode: 'calendar3', amount: 50000, crossCheck: true, alertThreshold: 30, rhEmail: '', provider: 'emailjs', emailjs: { serviceId: '', templateId: '', publicKey: '' }, webhook: { url: '' }, outlook: { clientId: '', accountType: 'personal', tenantId: '' }, subject: DEFAULT_SUBJECT, body: DEFAULT_BODY, primeSubject: DEFAULT_PRIME_SUBJECT, primeBody: DEFAULT_PRIME_BODY };
   }
   function sanitizeSettings(input, today = todayISO()) {
     const d = defaultSettings(today), s = input && typeof input === 'object' ? input : {};
@@ -262,7 +262,7 @@
       alertThreshold: [15, 30, 45, 60].includes(Number(s.alertThreshold)) ? Number(s.alertThreshold) : 30,
       rhEmail: validEmail(s.rhEmail) ? s.rhEmail.trim() : '', provider: ['emailjs', 'webhook', 'outlook'].includes(s.provider) ? s.provider : 'emailjs',
       emailjs: { serviceId: String(s.emailjs?.serviceId || '').slice(0, 200), templateId: String(s.emailjs?.templateId || '').slice(0, 200), publicKey: String(s.emailjs?.publicKey || '').slice(0, 500) },
-      webhook: { url: safeHTTPS(s.webhook?.url || '') }, outlook: { clientId: /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.outlook?.clientId || '') ? s.outlook.clientId : '' }, subject: typeof s.subject === 'string' ? s.subject.slice(0, 500) : d.subject, body: typeof s.body === 'string' ? s.body.slice(0, 15000) : d.body, primeSubject: typeof s.primeSubject === 'string' ? s.primeSubject.slice(0, 500) : d.primeSubject, primeBody: typeof s.primeBody === 'string' ? s.primeBody.slice(0, 15000) : d.primeBody };
+      webhook: { url: safeHTTPS(s.webhook?.url || '') }, outlook: { clientId: /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.outlook?.clientId || '') ? s.outlook.clientId : '', accountType: s.outlook?.accountType === 'work' ? 'work' : 'personal', tenantId: /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(s.outlook?.tenantId || '') ? s.outlook.tenantId : '' }, subject: typeof s.subject === 'string' ? s.subject.slice(0, 500) : d.subject, body: typeof s.body === 'string' ? s.body.slice(0, 15000) : d.body, primeSubject: typeof s.primeSubject === 'string' ? s.primeSubject.slice(0, 500) : d.primeSubject, primeBody: typeof s.primeBody === 'string' ? s.primeBody.slice(0, 15000) : d.primeBody };
   }
   function safeHTTPS(value) { try { const u = new URL(String(value).trim()); return u.protocol === 'https:' && !u.username && !u.password ? u.href : ''; } catch { return ''; } }
   function normalizeProfile(input, strict = false) {

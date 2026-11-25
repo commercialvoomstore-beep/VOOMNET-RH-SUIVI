@@ -145,3 +145,10 @@ test('détection par en-têtes et indexation équivalente au filtrage naïf', ()
   assert.equal(C.detectKind(C.EMPLOYEE_HEADERS), 'employees'); assert.equal(C.detectKind(C.POINTAGE_HEADERS), 'pointage'); assert.equal(C.detectKind(C.ABSENCE_HEADERS), 'absences');
   const sources = fixture(), s = settings(), indexed = C.evaluateAll(sources, {}, s, TODAY), naive = C.buildUniverse(sources, {}).map(r => C.evaluateEmployee(r, sources, s, TODAY)); assert.deepEqual(indexed, naive);
 });
+
+test('paramètres Outlook : compatibilité des anciens comptes et sélection du tenant professionnel', () => {
+  const clientId = '4bdaeb19-4411-4451-8bc7-97d76f0c1871', tenantId = '9bbb48a5-b972-4b2b-aacd-d4fa611a49fa';
+  assert.deepEqual(C.sanitizeSettings({ provider: 'outlook', outlook: { clientId } }).outlook, { clientId, accountType: 'personal', tenantId: '' });
+  assert.deepEqual(C.sanitizeSettings({ provider: 'outlook', outlook: { clientId, accountType: 'work', tenantId } }).outlook, { clientId, accountType: 'work', tenantId });
+  assert.equal(C.sanitizeSettings({ outlook: { accountType: 'work', tenantId: 'https://example.com' } }).outlook.tenantId, '');
+});
